@@ -53,7 +53,7 @@ namespace Monitorian.Core.Models
 			get => _showsAdjusted;
 			set => SetPropertyValue(ref _showsAdjusted, value);
 		}
-		private bool _showsAdjusted = false;
+		private bool _showsAdjusted = true;
 
 		/// <summary>
 		/// Known monitors with user-specified names
@@ -61,7 +61,7 @@ namespace Monitorian.Core.Models
 		[DataMember]
 		public ObservableKeyedList<string, MonitorValuePack> KnownMonitors
 		{
-			get => _knownMonitors ?? (_knownMonitors = new ObservableKeyedList<string, MonitorValuePack>());
+			get => _knownMonitors ??= new ObservableKeyedList<string, MonitorValuePack>();
 			protected set => _knownMonitors = value;
 		}
 		private ObservableKeyedList<string, MonitorValuePack> _knownMonitors;
