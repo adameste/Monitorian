@@ -51,10 +51,13 @@ namespace Monitorian.Core
 
 			NotifyIconContainer = new NotifyIconContainer();
 
+			
 			_settingsWatcher = new SettingsWatcher();
 			_powerWatcher = new PowerWatcher();
 			_brightnessWatcher = new BrightnessWatcher();
 		}
+
+		
 
 		public virtual async Task InitiateAsync()
 		{

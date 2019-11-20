@@ -25,6 +25,9 @@ namespace Monitorian.Core.Views
 		private readonly StickWindowMover _mover;
 		public MainWindowViewModel ViewModel => (MainWindowViewModel)this.DataContext;
 
+		private readonly KeyboardHook _brightnessDownHook;
+		private readonly KeyboardHook _brightnessUpHook;
+
 		public MainWindow(AppControllerCore controller)
 		{
 			LanguageService.Switch();
@@ -32,8 +35,24 @@ namespace Monitorian.Core.Views
 			InitializeComponent();
 
 			this.DataContext = new MainWindowViewModel(controller);
-
+			_brightnessDownHook = new KeyboardHook(Application.Current.MainWindow, VirtualKeyCodes.F9, ModifierKeyCodes.Control | ModifierKeyCodes.Shift);
+			_brightnessUpHook = new KeyboardHook(Application.Current.MainWindow, VirtualKeyCodes.F10, ModifierKeyCodes.Control | ModifierKeyCodes.Shift);
+			_brightnessDownHook.Triggered += _brightnessDownHook_Triggered;
+			_brightnessUpHook.Triggered += _brightnessUpHook_Triggered;
 			_mover = new StickWindowMover(this, controller.NotifyIconContainer.NotifyIcon);
+			_controller = controller;
+		}
+
+		private void _brightnessUpHook_Triggered()
+		{
+			foreach (var it in _controller.Monitors)
+				it.IncrementBrightness(5, false);
+		}
+
+		private void _brightnessDownHook_Triggered()
+		{
+			foreach (var it in _controller.Monitors)
+				it.DecrementBrightness(5, false);
 		}
 
 		protected override void OnSourceInitialized(EventArgs e)
@@ -64,6 +83,10 @@ namespace Monitorian.Core.Views
 
 		protected override void OnClosed(EventArgs e)
 		{
+			_brightnessDownHook.Triggered -= _brightnessDownHook_Triggered;
+			_brightnessUpHook.Triggered -= _brightnessUpHook_Triggered;
+			_brightnessUpHook.Dispose();
+			_brightnessDownHook.Dispose();
 			BindingOperations.ClearBinding(
 				this,
 				UsesLargeElementsProperty);
@@ -111,6 +134,7 @@ namespace Monitorian.Core.Views
 							window.Resources[key] = value * factor;
 						}
 					}));
+		private readonly AppControllerCore _controller;
 
 		#endregion
 
@@ -173,5 +197,6 @@ namespace Monitorian.Core.Views
 		}
 
 		#endregion
+
 	}
 }

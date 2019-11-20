@@ -65,6 +65,7 @@
     <Compile Include="Helper\OsVersion.cs" />
     <Compile Include="Helper\StringExtension.cs" />
     <Compile Include="Helper\Throttle.cs" />
+    <Compile Include="KeyboardHook.cs" />
     <Compile Include="Models\Monitor\DdcMonitorItem.cs" />
     <Compile Include="Models\Monitor\DeviceContext.cs" />
     <Compile Include="Models\Monitor\DeviceInstallation.cs" />
