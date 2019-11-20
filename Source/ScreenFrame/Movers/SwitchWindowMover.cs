@@ -134,11 +134,11 @@ namespace ScreenFrame.Movers
 		/// <param name="windowHeight">Window height</param>
 		/// <param name="location">Location of window</param>
 		/// <returns>True if successfully gets</returns>
-		protected override bool TryGetAdjacentLocation(double windowWidth, double windowHeight, out Point location)
+		protected override bool TryGetAdjacentLocation(double windowWidth, double windowHeight, out Rect location)
 		{
 			if (IsDeparted)
 			{
-				location = default(Point);
+				location = default;
 				return false;
 			}
 			return base.TryGetAdjacentLocation(windowWidth, windowHeight, out location);
