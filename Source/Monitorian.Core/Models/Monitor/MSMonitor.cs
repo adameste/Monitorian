@@ -20,13 +20,13 @@ namespace Monitorian.Core.Models.Monitor
 		public class DesktopItem
 		{
 			[DataMember(Order = 0)]
-			public string DeviceInstanceId { get; private set; }
+			public string DeviceInstanceId { get; }
 
 			[DataMember(Order = 1)]
-			public string Description { get; private set; }
+			public string Description { get; }
 
 			[DataMember(Order = 2)]
-			public byte[] BrightnessLevels { get; private set; }
+			public byte[] BrightnessLevels { get; }
 
 			public DesktopItem(
 				string deviceInstanceId,
@@ -183,7 +183,7 @@ namespace Monitorian.Core.Models.Monitor
 		{
 			if (string.IsNullOrWhiteSpace(deviceInstanceId))
 				throw new ArgumentNullException(nameof(deviceInstanceId));
-			if ((brightness < 0) || (100 < brightness))
+			if (brightness is < 0 or > 100)
 				throw new ArgumentOutOfRangeException(nameof(brightness), brightness, "The brightness must be within 0 to 100.");
 
 			try

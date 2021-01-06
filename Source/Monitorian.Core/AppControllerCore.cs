@@ -16,7 +16,9 @@ using Monitorian.Core.Models.Monitor;
 using Monitorian.Core.Models.Watcher;
 using Monitorian.Core.ViewModels;
 using Monitorian.Core.Views;
+
 using ScreenFrame;
+
 using StartupAgency;
 
 namespace Monitorian.Core
@@ -39,6 +41,8 @@ namespace Monitorian.Core
 		private readonly PowerWatcher _powerWatcher;
 		private readonly BrightnessWatcher _brightnessWatcher;
 
+		private OperationRecorder _recorder;
+
 		public AppControllerCore(AppKeeper keeper, SettingsCore settings)
 		{
 			this._keeper = keeper ?? throw new ArgumentNullException(nameof(keeper));
@@ -59,7 +63,7 @@ namespace Monitorian.Core
 		public virtual async Task InitiateAsync()
 		{
 			Settings.Initiate();
-			Settings.KnownMonitors.AbsoluteCapacity = MaxKnownMonitorsCount;
+			Settings.MonitorCustomizations.AbsoluteCapacity = MaxKnownMonitorsCount;
 			Settings.PropertyChanged += OnSettingsChanged;
 
 			NotifyIconContainer.ShowIcon("pack://application:,,,/Monitorian.Core;component/Resources/Icons/TrayIcon.ico", ProductInfo.Title);
@@ -70,6 +74,9 @@ namespace Monitorian.Core
 			if (StartupAgent.IsWindowShowExpected())
 				_current.MainWindow.Show();
 
+			if (Settings.MakesOperationLog)
+				_recorder = new OperationRecorder("Initiated");
+
 			await ScanAsync();
 
 			StartupAgent.Requested += (sender, e) => e.Response = OnRequested(sender, e.Args);
@@ -77,8 +84,8 @@ namespace Monitorian.Core
 			NotifyIconContainer.MouseLeftButtonClick += OnMainWindowShowRequestedBySelf;
 			NotifyIconContainer.MouseRightButtonClick += OnMenuWindowShowRequested;
 
-			_displayWatcher.Subscribe(() => OnMonitorsChangeInferred());
-			_powerWatcher.Subscribe(() => OnMonitorsChangeInferred(), PowerManagement.GetOnPowerSettingChanged());
+			_displayWatcher.Subscribe(() => OnMonitorsChangeInferred(nameof(DisplayWatcher)));
+			_powerWatcher.Subscribe((e) => OnMonitorsChangeInferred($"{nameof(PowerWatcher)} - {e.Mode}"), PowerManagement.GetOnPowerSettingChanged());
 			_brightnessWatcher.Subscribe((instanceName, brightness) => Update(instanceName, brightness));
 		}
 
@@ -137,7 +144,7 @@ namespace Monitorian.Core
 		{
 			var window = new MenuWindow(this, pivot);
 			window.ViewModel.CloseAppRequested += (sender, e) => _current.Shutdown();
-			window.AddMenuItem(new ProbeSection());
+			window.AddMenuItem(new ProbeSection(this));
 			window.Show();
 		}
 
@@ -145,11 +152,19 @@ namespace Monitorian.Core
 		{
 			if (e.PropertyName == nameof(Settings.EnablesUnison))
 				OnSettingsEnablesUnisonChanged();
+
+			if (e.PropertyName == nameof(Settings.MakesOperationLog))
+				_recorder = Settings.MakesOperationLog ? new OperationRecorder("Enabled") : null;
 		}
 
 		#region Monitors
 
-		protected virtual async void OnMonitorsChangeInferred() => await ScanAsync(TimeSpan.FromSeconds(3));
+		protected virtual async void OnMonitorsChangeInferred(object sender = null)
+		{
+			_recorder?.Record($"{nameof(OnMonitorsChangeInferred)} ({sender})");
+
+			await ScanAsync(TimeSpan.FromSeconds(3));
+		}
 
 		internal event EventHandler<bool> ScanningChanged;
 
@@ -162,7 +177,7 @@ namespace Monitorian.Core
 		private int _scanCount = 0;
 		private int _updateCount = 0;
 
-		private Task ScanAsync() => ScanAsync(TimeSpan.Zero);
+		internal Task ScanAsync() => ScanAsync(TimeSpan.Zero);
 
 		private async Task ScanAsync(TimeSpan interval)
 		{
@@ -176,6 +191,8 @@ namespace Monitorian.Core
 
 					var intervalTask = (interval > TimeSpan.Zero) ? Task.Delay(interval) : Task.CompletedTask;
 
+					_recorder?.StartRecord($"{nameof(ScanAsync)} [{DateTime.Now}]");
+
 					await Task.Run(async () =>
 					{
 						var oldMonitorIndices = Enumerable.Range(0, Monitors.Count).ToList();
@@ -183,17 +200,18 @@ namespace Monitorian.Core
 
 						foreach (var item in await MonitorManager.EnumerateMonitorsAsync())
 						{
+							_recorder?.AddItem("Items", item.ToString());
+
 							var oldMonitorExists = false;
 
 							foreach (int index in oldMonitorIndices)
 							{
 								var oldMonitor = Monitors[index];
-								if (string.Equals(oldMonitor.DeviceInstanceId, item.DeviceInstanceId, StringComparison.OrdinalIgnoreCase)
-									&& (oldMonitor.IsAccessible == item.IsAccessible))
+								if (string.Equals(oldMonitor.DeviceInstanceId, item.DeviceInstanceId, StringComparison.OrdinalIgnoreCase))
 								{
 									oldMonitorExists = true;
 									oldMonitorIndices.Remove(index);
-									item.Dispose();
+									oldMonitor.Replace(item);
 									break;
 								}
 							}
@@ -231,7 +249,7 @@ namespace Monitorian.Core
 					var maxMonitorsCount = await GetMaxMonitorsCountAsync();
 
 					var updateResults = await Task.WhenAll(Monitors
-						.Where(x => x.IsControllable)
+						.Where(x => x.IsLikelyControllable)
 						.Select((x, index) =>
 						{
 							if (index < maxMonitorsCount)
@@ -253,6 +271,9 @@ namespace Monitorian.Core
 
 					foreach (var m in Monitors.Where(x => !x.IsControllable))
 						m.IsTarget = !controllableMonitorExists;
+
+					_recorder?.AddItems(nameof(Monitors), Monitors.Select(x => x.ToString()));
+					_recorder?.StopRecord();
 
 					await intervalTask;
 				}
@@ -308,7 +329,8 @@ namespace Monitorian.Core
 		private void MonitorsResetByKey()
 		{
 			var monitor = Monitors.FirstOrDefault(x => x.IsSelectedByKey);
-			if (monitor != null)
+
+			if (monitor is not null)
 				monitor.IsByKey = false;
 		}
 
@@ -325,7 +347,7 @@ namespace Monitorian.Core
 
 		#endregion
 
-		#region Name/Unison
+		#region Customization
 
 		private void OnSettingsEnablesUnisonChanged()
 		{
@@ -336,26 +358,31 @@ namespace Monitorian.Core
 				m.IsUnison = false;
 		}
 
-		protected internal virtual bool TryLoadNameUnison(string deviceInstanceId, ref string name, ref bool isUnison)
+		protected internal virtual bool TryLoadCustomization(string deviceInstanceId, ref string name, ref bool isUnison, ref byte lowest, ref byte highest)
 		{
-			if (Settings.KnownMonitors.TryGetValue(deviceInstanceId, out MonitorValuePack value))
+			if (Settings.MonitorCustomizations.TryGetValue(deviceInstanceId, out MonitorCustomizationItem m)
+				&& (m.Lowest < m.Highest) && (m.Highest <= 100))
 			{
-				name = value.Name;
-				isUnison = value.IsUnison;
+				name = m.Name;
+				isUnison = m.IsUnison;
+				lowest = m.Lowest;
+				highest = m.Highest;
 				return true;
 			}
 			return false;
 		}
 
-		protected internal virtual void SaveNameUnison(string deviceInstanceId, string name, bool isUnison)
+		protected internal virtual void SaveCustomization(string deviceInstanceId, string name, bool isUnison, byte lowest, byte highest)
 		{
-			if ((name != null) || isUnison)
+			if (((name is not null) || isUnison || (0 != lowest) || (highest != 100))
+				&& (lowest < highest) && (highest <= 100))
 			{
-				Settings.KnownMonitors.Add(deviceInstanceId, new MonitorValuePack(name, isUnison));
+				Settings.MonitorCustomizations.Add(deviceInstanceId, new MonitorCustomizationItem(name, isUnison, lowest, highest));
+
 			}
 			else
 			{
-				Settings.KnownMonitors.Remove(deviceInstanceId);
+				Settings.MonitorCustomizations.Remove(deviceInstanceId);
 			}
 		}
 

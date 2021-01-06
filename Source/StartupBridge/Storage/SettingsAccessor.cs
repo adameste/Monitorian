@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Windows.Foundation.Collections;
 using Windows.Storage;
 
-namespace StartupBridge.Helper
+namespace StartupBridge.Storage
 {
 	/// <summary>
 	/// Accessor to <see cref="Windows.Storage.ApplicationData.LocalSettings"/> or <see cref="Windows.Storage.ApplicationData.RoamingSettings"/>

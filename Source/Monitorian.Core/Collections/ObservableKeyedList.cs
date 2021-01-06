@@ -7,7 +7,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Monitorian.Core.Common
+namespace Monitorian.Core.Collections
 {
 	/// <summary>
 	/// A wrapper class of <see cref="System.Collections.Generic.IEnumerable{KeyValuePair{TKey, TValue}}"/> which implements INotifyCollectionChanged

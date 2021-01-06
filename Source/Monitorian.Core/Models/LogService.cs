@@ -25,64 +25,105 @@ namespace Monitorian.Core.Models
 		/// <summary>
 		/// Records probe log to Desktop.
 		/// </summary>
-		/// <param name="log">Log</param>
-		/// <remarks>A log file will be overridden.</remarks>
-		public static void RecordProbe(string log)
+		/// <param name="content">Content</param>
+		/// <remarks>
+		/// The log file will be always overwritten.
+		/// </remarks>
+		public static void RecordProbe(string content)
 		{
-			var content = ComposeHeader() + Environment.NewLine
-				+ log;
+			content = ComposeHeader() + Environment.NewLine
+				+ content;
 
 			if (MessageBox.Show(
-				Resources.RecordProbe,
+				Resources.RecordProbeMessage,
 				ProductInfo.Title,
 				MessageBoxButton.OKCancel,
 				MessageBoxImage.Information,
 				MessageBoxResult.OK) != MessageBoxResult.OK)
 				return;
 
-			RecordToDesktop(ProbeFileName, content, false);
+			RecordToDesktop(ProbeFileName, content);
 		}
 
 		/// <summary>
 		/// Records operation log to AppData.
 		/// </summary>
-		/// <param name="log">Log</param>
-		/// <remarks>A log file of previous dates will be overridden.</remarks>
-		public static void RecordOperation(string log)
+		/// <param name="content">Content</param>
+		/// <remarks>
+		/// The log file will be appended with new content as long as one day has not yet passed
+		/// since last write. Otherwise, the log file will be overwritten.
+		/// </remarks>
+		public static void RecordOperation(string content)
 		{
-			var content = ComposeHeader() + Environment.NewLine
-				+ log + Environment.NewLine + Environment.NewLine;
+			content = ComposeHeader() + Environment.NewLine
+				+ content + Environment.NewLine + Environment.NewLine;
 
-			RecordToAppData(OperationFileName, content);
+			RecordToAppData(OperationFileName, content, 100);
+		}
+
+		/// <summary>
+		/// Copies operation log to Desktop.
+		/// </summary>
+		public static void CopyOperation()
+		{
+			if (!TryReadFromAppData(OperationFileName, out string content))
+				return;
+
+			if (MessageBox.Show(
+				Resources.CopyOperationMessage,
+				ProductInfo.Title,
+				MessageBoxButton.OKCancel,
+				MessageBoxImage.Information,
+				MessageBoxResult.OK) != MessageBoxResult.OK)
+				return;
+
+			RecordToDesktop(OperationFileName, content);
 		}
 
 		/// <summary>
 		/// Records exception log to AppData and Desktop.
 		/// </summary>
-		/// <param name="fileName">File name</param>
 		/// <param name="exception">Exception</param>
-		/// <remarks>A log file of previous dates will be overridden.</remarks>
+		/// <remarks>
+		/// The log file will be appended with new exception as long as one day has not yet passed
+		/// since last write. Otherwise, the log file will be overwritten.
+		/// </remarks>
 		public static void RecordException(Exception exception)
 		{
 			var content = ComposeHeader() + Environment.NewLine
 				+ exception.ToDetailedString() + Environment.NewLine + Environment.NewLine;
 
-			RecordToAppData(ExceptionFileName, content);
+			RecordToAppData(ExceptionFileName, content, 10);
 
 			if (MessageBox.Show(
-				Resources.RecordException,
+				Resources.RecordExceptionMessage,
 				ProductInfo.Title,
 				MessageBoxButton.YesNo,
 				MessageBoxImage.Error,
 				MessageBoxResult.Yes) != MessageBoxResult.Yes)
 				return;
 
-			RecordToDesktop(ExceptionFileName, content, true);
+			RecordToDesktop(ExceptionFileName, content, 10);
 		}
 
 		#region Helper
 
-		private static void RecordToAppData(string fileName, string content)
+		private static void RecordToTemp(string fileName, string content, int maxCount = 1)
+		{
+			try
+			{
+				var tempFilePath = Path.Combine(Path.GetTempPath(), fileName);
+
+				UpdateText(tempFilePath, content, maxCount);
+			}
+			catch (Exception ex)
+			{
+				Trace.WriteLine("Failed to record log to Temp." + Environment.NewLine
+					+ ex);
+			}
+		}
+
+		private static void RecordToAppData(string fileName, string content, int maxCount = 1)
 		{
 			try
 			{
@@ -92,7 +133,7 @@ namespace Monitorian.Core.Models
 					FolderService.AppDataFolderPath,
 					fileName);
 
-				UpdateText(appDataFilePath, content);
+				UpdateText(appDataFilePath, content, maxCount);
 			}
 			catch (Exception ex)
 			{
@@ -101,7 +142,33 @@ namespace Monitorian.Core.Models
 			}
 		}
 
-		private static void RecordToDesktop(string fileName, string content, bool update)
+		private static bool TryReadFromAppData(string fileName, out string content)
+		{
+			var appDataFilePath = Path.Combine(
+				FolderService.AppDataFolderPath,
+				fileName);
+
+			if (File.Exists(appDataFilePath))
+			{
+				try
+				{
+					using (var sr = new StreamReader(appDataFilePath, Encoding.UTF8))
+					{
+						content = sr.ReadToEnd();
+						return true;
+					}
+				}
+				catch (Exception ex)
+				{
+					Trace.WriteLine("Failed to read log from AppData." + Environment.NewLine
+						+ ex);
+				}
+			}
+			content = null;
+			return false;
+		}
+
+		private static void RecordToDesktop(string fileName, string content, int maxCount = 1)
 		{
 			try
 			{
@@ -109,14 +176,7 @@ namespace Monitorian.Core.Models
 					Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
 					fileName);
 
-				if (update)
-				{
-					UpdateText(desktopFilePath, content);
-				}
-				else
-				{
-					SaveText(desktopFilePath, content);
-				}
+				UpdateText(desktopFilePath, content, maxCount);
 			}
 			catch (Exception ex)
 			{
@@ -131,41 +191,36 @@ namespace Monitorian.Core.Models
 				sw.Write(content);
 		}
 
-		private const int MaxSectionCount = 100;
-
-		private static void UpdateText(string filePath, string newContent)
+		private static void UpdateText(string filePath, string newContent, int maxCount)
 		{
 			string oldContent = null;
 
-			if (File.Exists(filePath) && (File.GetLastWriteTime(filePath) > DateTime.Now.AddDays(-1)))
+			if ((1 < maxCount) && File.Exists(filePath) && (File.GetLastWriteTime(filePath) > DateTime.Now.AddDays(-1)))
 			{
 				using (var sr = new StreamReader(filePath, Encoding.UTF8))
 					oldContent = sr.ReadToEnd();
 
-				oldContent = string.Join(Environment.NewLine, EnumerateLastLines(oldContent, HeaderStart, MaxSectionCount - 1).Reverse());
+				oldContent = TruncateSections(oldContent, HeaderStart, maxCount - 1);
 			}
 
 			SaveText(filePath, oldContent + newContent);
 		}
 
-		private static IEnumerable<string> EnumerateLastLines(string source, string sectionHeader, int sectionCount)
+		private static string TruncateSections(string source, string sectionHeader, int sectionCount)
 		{
+			if (string.IsNullOrEmpty(sectionHeader))
+				throw new ArgumentNullException(nameof(sectionHeader));
+			if (sectionCount <= 0)
+				throw new ArgumentOutOfRangeException(nameof(sectionCount), sectionCount, "The count must be greater than 0.");
+
 			if (string.IsNullOrEmpty(source))
-				yield break;
+				return string.Empty;
 
-			var lines = source.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-			int count = 0;
+			var firstIndex = source.StartsWith(sectionHeader, StringComparison.Ordinal) ? new[] { 0 } : Enumerable.Empty<int>();
+			var secondIndices = source.IndicesOf('\n' /* either CR+Lf or Lf */ + sectionHeader, StringComparison.Ordinal).Select(x => x + 1);
+			var indices = firstIndex.Concat(secondIndices).ToArray();
 
-			foreach (var line in lines.Reverse())
-			{
-				yield return line;
-
-				if (!line.StartsWith(sectionHeader))
-					continue;
-
-				if (++count >= sectionCount)
-					yield break;
-			}
+			return source.Substring(indices[Math.Max(0, indices.Length - sectionCount)]);
 		}
 
 		#endregion

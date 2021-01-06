@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
@@ -141,6 +142,8 @@ namespace Monitorian.Core.Models.Monitor
 		}
 
 		private const byte LuminanceCode = 0x10; // VCP Code of Luminance
+		private const byte ContrastCode = 0x12;
+		private const byte SpeakerVolumeCode = 0x62;
 
 		#endregion
 
@@ -150,23 +153,26 @@ namespace Monitorian.Core.Models.Monitor
 		public class PhysicalItem
 		{
 			[DataMember(Order = 0)]
-			public string Description { get; private set; }
+			public string Description { get; }
 
 			[DataMember(Order = 1)]
-			public int MonitorIndex { get; private set; }
+			public int MonitorIndex { get; }
 
 			public SafePhysicalMonitorHandle Handle { get; }
 
 			public bool IsSupported => IsHighLevelSupported || IsLowLevelSupported;
 
 			[DataMember(Order = 2)]
-			public bool IsHighLevelSupported { get; private set; }
+			public bool IsHighLevelSupported { get; }
 
 			[DataMember(Order = 3)]
-			public bool IsLowLevelSupported { get; private set; }
+			public bool IsLowLevelSupported { get; }
 
 			[DataMember(Order = 4)]
-			public string Capabilities { get; private set; }
+			public string CapabilitiesString { get; }
+
+			[DataMember(Order = 5)]
+			public string CapabilitiesReport { get; }
 
 			public PhysicalItem(
 				string description,
@@ -174,14 +180,16 @@ namespace Monitorian.Core.Models.Monitor
 				SafePhysicalMonitorHandle handle,
 				bool isHighLevelSupported,
 				bool isLowLevelSupported = false,
-				string capabilities = null)
+				string capabilitiesString = null,
+				string capabilitiesReport = null)
 			{
 				this.Description = description;
 				this.MonitorIndex = monitorIndex;
 				this.Handle = handle;
 				this.IsHighLevelSupported = isHighLevelSupported;
 				this.IsLowLevelSupported = isLowLevelSupported;
-				this.Capabilities = capabilities;
+				this.CapabilitiesString = capabilitiesString;
+				this.CapabilitiesReport = capabilitiesReport;
 			}
 		}
 
@@ -227,7 +235,7 @@ namespace Monitorian.Core.Models.Monitor
 						&& caps.HasFlag(MC_CAPS.MC_CAPS_BRIGHTNESS);
 
 					bool isLowLevelSupported = false;
-					string capabilities = null;
+					string capabilitiesString = null;
 
 					if (!isHighLevelSupported || verbose)
 					{
@@ -235,15 +243,15 @@ namespace Monitorian.Core.Models.Monitor
 							handle,
 							out uint capabilitiesStringLength))
 						{
-							var capabilitiesString = new StringBuilder((int)capabilitiesStringLength);
+							var buffer = new StringBuilder((int)capabilitiesStringLength);
 
 							if (CapabilitiesRequestAndCapabilitiesReply(
 								handle,
-								capabilitiesString,
+								buffer,
 								capabilitiesStringLength))
 							{
-								capabilities = capabilitiesString.ToString();
-								isLowLevelSupported = IsLowLevelSupported(capabilities);
+								capabilitiesString = buffer.ToString();
+								isLowLevelSupported = IsLowLevelSupported(capabilitiesString);
 							}
 						}
 					}
@@ -252,7 +260,7 @@ namespace Monitorian.Core.Models.Monitor
 					//Debug.WriteLine($"Handle: {physicalMonitor.hPhysicalMonitor}");
 					//Debug.WriteLine($"IsHighLevelSupported: {isHighLevelSupported}");
 					//Debug.WriteLine($"IsLowLevelSupported: {isLowLevelSupported}");
-					//Debug.WriteLine($"Capabilities: {capabilities}");
+					//Debug.WriteLine($"CapabilitiesString: {capabilitiesString}");
 
 					yield return new PhysicalItem(
 						description: physicalMonitor.szPhysicalMonitorDescription,
@@ -260,7 +268,8 @@ namespace Monitorian.Core.Models.Monitor
 						handle: handle,
 						isHighLevelSupported: isHighLevelSupported,
 						isLowLevelSupported: isLowLevelSupported,
-						capabilities: verbose ? capabilities : null);
+						capabilitiesString: (verbose ? capabilitiesString : null),
+						capabilitiesReport: (verbose ? MakeCapabilitiesReport(capabilitiesString) : null));
 
 					monitorIndex++;
 				}
@@ -273,60 +282,66 @@ namespace Monitorian.Core.Models.Monitor
 
 		private static bool IsLowLevelSupported(string source)
 		{
-			if (string.IsNullOrWhiteSpace(source))
-				return false;
+			return EnumerateVcpCodes(source).Contains(LuminanceCode);
+		}
+
+		private static string MakeCapabilitiesReport(string source)
+		{
+			var codes = EnumerateVcpCodes(source).ToArray();
+			return $"Luminance: {codes.Contains(LuminanceCode)}, Contrast: {codes.Contains(ContrastCode)}, Speaker Volume: {codes.Contains(SpeakerVolumeCode)}";
+		}
+
+		private static IEnumerable<byte> EnumerateVcpCodes(string source)
+		{
+			if (string.IsNullOrEmpty(source))
+				yield break;
 
 			int index = source.IndexOf("vcp", StringComparison.OrdinalIgnoreCase);
 			if (index < 0)
-				return false;
+				yield break;
 
-			return EnumerateCodes().Any(x => x == "10"); // 10 (hex) is VCP Code of Luminance.
+			int depth = 0;
+			var buffer = new StringBuilder(2);
 
-			IEnumerable<string> EnumerateCodes()
+			foreach (char c in source.Skip(index + 3))
 			{
-				int depth = 0;
-				var buffer = new StringBuilder(2);
-
-				foreach (char c in source.Skip(index + 3))
+				switch (c)
 				{
-					switch (c)
-					{
-						case '(':
-							depth++;
-							break;
-						case ')':
-							depth--;
-							if (depth <= 0)
+					case '(':
+						depth++;
+						break;
+					case ')':
+						depth--;
+						if (depth < 1)
+						{
+							if (0 < buffer.Length)
 							{
-								if (0 < buffer.Length)
-								{
-									yield return buffer.ToString();
-								}
-								yield break; // End of enumeration
+								yield return byte.Parse(buffer.ToString(), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo);
 							}
-							break;
-						default:
-							if (depth == 1)
+							yield break; // End of enumeration
+						}
+						break;
+					default:
+						if (depth == 1)
+						{
+							if (IsHexNumber(c))
 							{
-								if (char.IsWhiteSpace(c))
-								{
-									if (buffer.Length < 1)
-										continue;
-								}
-								else
-								{
-									buffer.Append(c);
-									if (buffer.Length < 2)
-										continue;
-								}
+								buffer.Append(c);
+								if (buffer.Length == 1)
+									continue;
+							}
 
-								yield return buffer.ToString();
+							if (0 < buffer.Length)
+							{
+								yield return byte.Parse(buffer.ToString(), NumberStyles.HexNumber, NumberFormatInfo.InvariantInfo);
 								buffer.Clear();
 							}
-							break;
-					}
+						}
+						break;
 				}
 			}
+
+			static bool IsHexNumber(char c) => c is (>= '0' and <= '9') or (>= 'A' and <= 'F') or (>= 'a' and <= 'f');
 		}
 
 		/// <summary>
@@ -365,7 +380,7 @@ namespace Monitorian.Core.Models.Monitor
 					out uint currentBrightness,
 					out uint maximumBrightness))
 				{
-					Debug.WriteLine($"Failed to get brightnesses. {Error.GetMessage()}");
+					Debug.WriteLine($"Failed to get brightnesses (High level). {Error.GetMessage()}");
 					return (success: false, 0, 0, 0);
 				}
 				return (success: true,
@@ -412,11 +427,12 @@ namespace Monitorian.Core.Models.Monitor
 
 			if (!useLowLevel)
 			{
+				// SetMonitorBrightness function may return true even when it actually failed.
 				if (!SetMonitorBrightness(
 					physicalMonitorHandle,
 					brightness))
 				{
-					Debug.WriteLine($"Failed to set brightness. {Error.GetMessage()}");
+					Debug.WriteLine($"Failed to set brightness (High level). {Error.GetMessage()}");
 					return false;
 				}
 			}

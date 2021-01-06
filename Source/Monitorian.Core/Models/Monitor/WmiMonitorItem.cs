@@ -27,65 +27,57 @@ namespace Monitorian.Core.Models.Monitor
 				description: description,
 				displayIndex: displayIndex,
 				monitorIndex: monitorIndex,
-				isAccessible: true)
+				isReachable: true)
 		{
 			this._brightnessLevels = brightnessLevels ?? throw new ArgumentNullException(nameof(brightnessLevels));
 			this._isRemovable = isRemovable;
 		}
 
-		private readonly object _lock = new object();
-
 		public override bool UpdateBrightness(int brightness = -1)
 		{
-			lock (_lock)
+			if (_isRemovable)
 			{
-				if (_isRemovable)
-				{
-					this.Brightness = (0 <= brightness)
+				this.Brightness = (0 <= brightness)
+					? brightness
+					: MSMonitor.GetBrightness(DeviceInstanceId);
+			}
+			else
+			{
+				this.Brightness = PowerManagement.GetActiveSchemeBrightness();
+
+				this.BrightnessSystemAdjusted = !PowerManagement.IsAdaptiveBrightnessEnabled
+					? -1 // Default
+					: (0 <= brightness)
 						? brightness
 						: MSMonitor.GetBrightness(DeviceInstanceId);
-				}
-				else
-				{
-					this.Brightness = PowerManagement.GetActiveSchemeBrightness();
-
-					this.BrightnessSystemAdjusted = !PowerManagement.IsAdaptiveBrightnessEnabled
-						? -1 // Default
-						: (0 <= brightness)
-							? brightness
-							: MSMonitor.GetBrightness(DeviceInstanceId);
-				}
-				return (0 <= this.Brightness);
 			}
+			return (0 <= this.Brightness);
 		}
 
 		public override bool SetBrightness(int brightness)
 		{
-			if ((brightness < 0) || (100 < brightness))
+			if (brightness is < 0 or > 100)
 				throw new ArgumentOutOfRangeException(nameof(brightness), brightness, "The brightness must be within 0 to 100.");
 
-			lock (_lock)
+			if (_isRemovable)
 			{
-				if (_isRemovable)
-				{
-					brightness = ArraySearch.GetNearest(_brightnessLevels, (byte)brightness);
+				brightness = ArraySearch.GetNearest(_brightnessLevels, (byte)brightness);
 
-					if (MSMonitor.SetBrightness(DeviceInstanceId, brightness))
-					{
-						this.Brightness = brightness;
-						return true;
-					}
-				}
-				else
+				if (MSMonitor.SetBrightness(DeviceInstanceId, brightness))
 				{
-					if (PowerManagement.SetActiveSchemeBrightness(brightness))
-					{
-						this.Brightness = brightness;
-						return true;
-					}
+					this.Brightness = brightness;
+					return true;
 				}
-				return false;
 			}
+			else
+			{
+				if (PowerManagement.SetActiveSchemeBrightness(brightness))
+				{
+					this.Brightness = brightness;
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 }

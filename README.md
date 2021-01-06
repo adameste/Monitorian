@@ -10,6 +10,11 @@ The user can change the brightness of monitors, including external ones, either 
 ![Screenshot](Images/Screenshot_unison.png)<br>
 (DPI: 100%)
 
+In addition, the user can change the adjustable range of brightness for each monitor seamlessly.
+
+![Screenshot](Images/Screenshot_range.png)<br>
+(DPI: 100%)
+
 ## Requirements
 
  * Windows 7 or newer
@@ -23,7 +28,7 @@ The user can change the brightness of monitors, including external ones, either 
 [Monitorian](https://www.microsoft.com/store/apps/9nw33j738bl0) (Microsoft Store)
 
  * Other:<br>
-:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/2.2.0-Installer/MonitorianInstaller220.zip) | :floppy_disk: [Executables](https://github.com/emoacht/Monitorian/releases/download/2.2.0-Executables/Monitorian220.zip)
+:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/2.9.0-Installer/MonitorianInstaller290.zip) | :floppy_disk: [Executables](https://github.com/emoacht/Monitorian/releases/download/2.9.0-Executables/Monitorian290.zip)
 
 ## Install/Uninstall
 
@@ -43,19 +48,30 @@ Add-on features are available for Microsoft Store version on a subscription basi
 
 ![Screenshot](Images/Screenshot_keys_en.png)
 
+The experimental command line interaction is available. For the usage, execute `monitorian.exe /help`. No path is necessary.
+
 The code for add-on features is not included in this repository.
 
 ## Development
 
 This app is a WPF app developed and tested with Surface Pro 4.
 
-### Log
+### Probe
 
-The logs will be useful when looking into an issue.
+ - You can check the compatibility of your monitor by __probe.log__. It will include raw information on monitors, including capabilities through DDC/CI, from various APIs that are used to find accessible monitors. To get this log, tap `Probe into monitors` in the hidden menu described below.
+ - To open the hidden menu, <ins>click app title at the top of menu window 3 times.</ins> 
 
- - __exception.log__ - Information on exceptions when an unexpected problem happened.
+### Rescan
 
- - __probe.log__ - Information on capabilities of each monitor obtained from various APIs and used to find accessible monitors. To get this log, click the app title in menu window 3 times and then tap the button appeared beneath.
+ - As part of testing, you can manually trigger to rescan monitors via `Rescan monitors` in the hidden menu. A system sound will be played when completed.
+
+### Operations
+
+ - As part of testing, you can record operations to scan monitors and reflect their states. To enable the recording, check `Make operation log` in the hidden menu. After that, __operation.log__ can be copied by `Copy operation log`.
+
+### Exceptions
+
+ - If anything unexpected happens, __exception.log__ will be saved. It will be useful source of information when looking into an issue.
 
 ### Setup
 
@@ -65,13 +81,13 @@ The logs will be useful when looking into an issue.
 | Components                                                      | Fields                 |
 |-----------------------------------------------------------------|------------------------|
 | .NET Framework 4.7.2 SDK<br>.NET Framework 4.7.2 targeting pack | TargetFrameworkVersion |
-| Windows 10 SDK (10.0.18362.0)                                   | TargetPlatformVersion  |
+| Windows 10 SDK (10.0.19041.0)                                   | TargetPlatformVersion  |
 
-3. Load the solution by specifying `/Source/Monitorian.sln`. Then right click the solution name in solution explorer and execute `Restore NuGet Packages`.
+3. Load the solution by specifying `/Source/Monitorian.sln`. Then go to the solution explorer and right click the solution name and execute `Restore NuGet Packages`.
 
 ### Globalization
 
-An alternative language can be shown by adding a Resources (.resx) file which stores name/value pairs under `/Source/Monitorian.Core/Properties` folder. The system will automatically select the file which matches the user's environment.
+An alternative language can be shown by adding a Resources (.resx) file into `/Source/Monitorian.Core/Properties` folder. Each Resources file stores name/value pairs for a specific language and will be selected automatically depending on the user's environment.
 
  - The file name must be in `Resources.[language-culture].resx` format.
  - The name of a name/value pair must correspond to that in the default `Resources.resx` file to override it.
@@ -80,97 +96,96 @@ An alternative language can be shown by adding a Resources (.resx) file which st
 
 ## History
 
-Ver 2.2.0 2019-11-18
+Ver 2.9 2020-12-22
+
+- Improve codes
+
+Ver 2.8 2020-11-23
+
+- Adjust mouse wheel roll
+
+Ver 2.7 2020-10-30
+
+- Enable to change adjustable range
+- Adjust scan process
+- Add get/set brightness test to probe
+
+Ver 2.6 2020-8-10
+
+- Enable to defer update of brightness
+
+Ver 2.5 2020-8-1
+
+- Fix issue of empty description
+
+Ver 2.4 2019-12-30
+
+- Improve scan process
+
+Ver 2.3 2019-11-28
+
+- Change scan process
+
+Ver 2.2 2019-11-18
 
 - Change setting to show adjusted brightness by ambient light enabled as default
 - Fix bugs
 
-Ver 2.1.0 2019-11-6
+Ver 2.1 2019-11-6
 
  - Change location to show when the icon is in overflow area
  - Change behavior when sliders are moving in unison
  - Fix bugs
 
-Ver 2.0.0 2019-8-6
+Ver 2.0 2019-8-6
 
  - Enable operation by arrow keys
  - Redesign slider
 
-Ver 1.12.0 2019-3-9
+Ver 1.12 2019-3-9
 
  - Modify to handle raw brightnesses correctly when raw minimum and maximum brightnesses are not standard values. Thanks to @reflecat!
  - Change target framework to .NET Framework 4.7.2
 
-Ver 1.11.0 2019-2-7
+Ver 1.11 2019-2-7
 
  - Further suppress an exception
 
-Ver 1.10.0 2019-2-3
+Ver 1.10 2019-2-3
 
  - Change to enable transparency and blur effects only when transparency effects of OS is on
 
-Ver 1.9.0 2018-12-5
+Ver 1.9 2018-12-5
 
  - Change scan timings after resume
 
-Ver 1.8.0 2018-11-24
+Ver 1.8 2018-11-24
 
  - Supplement generic monitor name with connection type
 
-Ver 1.7.4 2018-11-14
-
- - Suppress an exception
-
-Ver 1.7.2 2018-10-17
-
- - Fix an exception
-
-Ver 1.7.1 2018-10-8
-
- - Modify handling of exceptions
-
-Ver 1.7.0 2018-8-22
+Ver 1.7 2018-8-22
 
  - Improved finding monitor name for Windows 10 April 2018 Update (1803)
 
-Ver 1.6.0 2018-5-25
+Ver 1.6 2018-5-25
 
  - Extended function to control DDC/CI connected monitor
  - Modified function to enable moving together
 
-Ver 1.5.1 2018-2-19
-
- - Refactored
-
-Ver 1.5.0 2018-2-12
+Ver 1.5 2018-2-12
 
  - Improved handling of uncontrollable monitor
 
-Ver 1.4.0 2018-1-17
+Ver 1.4 2018-1-17
 
  - Modified handling of monitor names
 
-Ver 1.2.4 2017-10-12
+Ver 1.2 2017-10-12
 
  - Added control by mouse wheel
-
-Ver 1.2.3 2017-5-24
-
- - Suppressed exception
-
-Ver 1.2.2 2017-4-17
-
- - Fixed issue of window location
-
-Ver 1.2.1 2017-4-3
-
- - Refactored
-
-Ver 1.2.0 2017-3-29
-
  - Added function to show adjusted brightness
 
-Ver 1.0.0 2017-2-22
+Ver 1.0 2017-2-22
 
  - Initial release
 

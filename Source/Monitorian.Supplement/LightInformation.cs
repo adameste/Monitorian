@@ -17,12 +17,12 @@ namespace Monitorian.Supplement
 	public class LightInformation
 	{
 		/// <summary>
-		/// Whether an integrated ambient light sensor exists.
+		/// Determines whether an integrated ambient light sensor exists.
 		/// </summary>
 		/// <returns>True if exists</returns>
 		public static bool AmbientLightSensorExists()
 		{
-			return (LightSensor.GetDefault() != null);
+			return (LightSensor.GetDefault() is not null);
 		}
 
 		/// <summary>
@@ -59,7 +59,7 @@ namespace Monitorian.Supplement
 					if (TimeSpan.Zero < value)
 					{
 						var sensor = _sensor ?? LightSensor.GetDefault();
-						if (sensor != null)
+						if (sensor is not null)
 						{
 							_reportInterval = Math.Max(sensor.MinimumReportInterval, (uint)value.TotalMilliseconds);
 						}
@@ -75,7 +75,7 @@ namespace Monitorian.Supplement
 		private static uint _reportInterval = 0;
 
 		/// <summary>
-		/// Ambient light illuminance changed event
+		/// Occurs when ambient light illuminance has changed
 		/// </summary>
 		/// <remarks>EventArgs indicates illuminance in lux.</remarks>
 		public static event EventHandler<float> AmbientLightChanged
@@ -104,7 +104,7 @@ namespace Monitorian.Supplement
 						return;
 
 					_ambientLightChanged -= value;
-					if (_ambientLightChanged != null)
+					if (_ambientLightChanged is not null)
 						return;
 
 					_sensor.ReportInterval = 0; // Resetting to the default interval is necessary when ending subscription.

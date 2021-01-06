@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -27,13 +28,16 @@ namespace Monitorian.Core.Models.Monitor
 			public string AlternateDescription { get; }
 			public byte DisplayIndex => _deviceItem.DisplayIndex;
 			public byte MonitorIndex => _deviceItem.MonitorIndex;
+			public bool IsInternal { get; }
 
 			public DeviceItemPlus(
 				DeviceContext.DeviceItem deviceItem,
-				string alternateDescription = null)
+				string alternateDescription = null,
+				bool isInternal = true)
 			{
 				this._deviceItem = deviceItem ?? throw new ArgumentNullException(nameof(deviceItem));
 				this.AlternateDescription = alternateDescription ?? deviceItem.Description;
+				this.IsInternal = isInternal;
 			}
 		}
 
@@ -48,32 +52,39 @@ namespace Monitorian.Core.Models.Monitor
 
 		private static async Task<List<DeviceItemPlus>> GetMonitorDevicesAsync()
 		{
-			if (!OsVersion.Is10Redstone4OrNewer)
-				return DeviceContext.EnumerateMonitorDevices().Select(x => new DeviceItemPlus(x)).ToList();
+			var displayItems = OsVersion.Is10Redstone4OrNewer
+				? await DisplayInformation.GetDisplayMonitorsAsync()
+				: Array.Empty<DisplayInformation.DisplayItem>();
 
-			var displayItems = await DisplayInformation.GetDisplayMonitorsAsync();
-
-			const string genericPattern = "^Generic (?:PnP|Non-PnP) Monitor$";
-
-			return DeviceContext.EnumerateMonitorDevices()
-				.Select(x =>
+			IEnumerable<DeviceItemPlus> Enumerate()
+			{
+				foreach (var deviceItem in DeviceContext.EnumerateMonitorDevices())
 				{
-					string alternateDescription = null;
-					if (Regex.IsMatch(x.Description, genericPattern, RegexOptions.IgnoreCase))
+					var displayItem = displayItems.FirstOrDefault(x => string.Equals(deviceItem.DeviceInstanceId, x.DeviceInstanceId, StringComparison.OrdinalIgnoreCase));
+					if (displayItem is not null)
 					{
-						var displayItem = displayItems.FirstOrDefault(y => string.Equals(x.DeviceInstanceId, y.DeviceInstanceId, StringComparison.OrdinalIgnoreCase));
-						if (!string.IsNullOrWhiteSpace(displayItem?.DisplayName))
+						var isDescriptionNullOrWhiteSpace = string.IsNullOrWhiteSpace(deviceItem.Description);
+						if (isDescriptionNullOrWhiteSpace ||
+							Regex.IsMatch(deviceItem.Description, "^Generic (?:PnP|Non-PnP) Monitor$", RegexOptions.IgnoreCase))
 						{
-							alternateDescription = displayItem.DisplayName;
-						}
-						else if (!string.IsNullOrEmpty(displayItem?.ConnectionDescription))
-						{
-							alternateDescription = $"{x.Description} ({displayItem.ConnectionDescription})";
+							if (!string.IsNullOrWhiteSpace(displayItem.DisplayName))
+							{
+								yield return new DeviceItemPlus(deviceItem, displayItem.DisplayName, displayItem.IsInternal);
+								continue;
+							}
+							if (!isDescriptionNullOrWhiteSpace &&
+								!string.IsNullOrWhiteSpace(displayItem.ConnectionDescription))
+							{
+								yield return new DeviceItemPlus(deviceItem, $"{deviceItem.Description} ({displayItem.ConnectionDescription})", displayItem.IsInternal);
+								continue;
+							}
 						}
 					}
-					return new DeviceItemPlus(x, alternateDescription);
-				})
-				.ToList();
+					yield return new DeviceItemPlus(deviceItem);
+				}
+			}
+
+			return Enumerate().Where(x => !string.IsNullOrWhiteSpace(x.AlternateDescription)).ToList();
 		}
 
 		private static IEnumerable<IMonitor> EnumerateMonitors(List<DeviceItemPlus> deviceItems)
@@ -81,7 +92,7 @@ namespace Monitorian.Core.Models.Monitor
 			if (!(deviceItems?.Any() == true))
 				yield break;
 
-			// By DDC/CI
+			// Obtained by DDC/CI
 			foreach (var handleItem in DeviceContext.GetMonitorHandles())
 			{
 				foreach (var physicalItem in MonitorConfiguration.EnumeratePhysicalMonitors(handleItem.MonitorHandle))
@@ -115,7 +126,7 @@ namespace Monitorian.Core.Models.Monitor
 				}
 			}
 
-			// By WMI
+			// Obtained by WMI
 			var installedItems = DeviceInstallation.EnumerateInstalledMonitors().ToArray();
 
 			foreach (var desktopItem in MSMonitor.EnumerateDesktopMonitors())
@@ -147,14 +158,15 @@ namespace Monitorian.Core.Models.Monitor
 				}
 			}
 
-			// Rest
+			// Unreachable neither by DDC/CI nor by WMI
 			foreach (var deviceItem in deviceItems)
 			{
-				yield return new InaccessibleMonitorItem(
+				yield return new UnreachableMonitorItem(
 					deviceInstanceId: deviceItem.DeviceInstanceId,
 					description: deviceItem.AlternateDescription,
 					displayIndex: deviceItem.DisplayIndex,
-					monitorIndex: deviceItem.MonitorIndex);
+					monitorIndex: deviceItem.MonitorIndex,
+					isInternal: deviceItem.IsInternal);
 			}
 		}
 
@@ -168,7 +180,8 @@ namespace Monitorian.Core.Models.Monitor
 			using (var ms = new MemoryStream())
 			using (var jw = JsonReaderWriterFactory.CreateJsonWriter(ms, Encoding.UTF8, true, true))
 			{
-				var serializer = new DataContractJsonSerializer(typeof(MonitorData));
+				var serializer = new DataContractJsonSerializer(typeof(MonitorData),
+					new DataContractJsonSerializerSettings { SerializeReadOnlyTypes = true });
 				serializer.WriteObject(jw, data);
 				jw.Flush();
 				return Encoding.UTF8.GetString(ms.ToArray());
@@ -176,27 +189,75 @@ namespace Monitorian.Core.Models.Monitor
 		}
 
 		[DataContract]
+		private class PhysicalItemPlus : MonitorConfiguration.PhysicalItem
+		{
+			[DataMember(Order = 6)]
+			public string GetBrightness { get; private set; }
+
+			[DataMember(Order = 7)]
+			public string SetBrightness { get; private set; }
+
+			public PhysicalItemPlus(
+				MonitorConfiguration.PhysicalItem item) : base(
+					description: item.Description,
+					monitorIndex: item.MonitorIndex,
+					handle: item.Handle,
+					isHighLevelSupported: item.IsHighLevelSupported,
+					isLowLevelSupported: item.IsLowLevelSupported,
+					capabilitiesString: item.CapabilitiesString,
+					capabilitiesReport: item.CapabilitiesReport)
+			{
+				TestBrightness();
+			}
+
+			private void TestBrightness()
+			{
+				var (isGetSuccess, minimum, current, maximum) = MonitorConfiguration.GetBrightness(Handle, IsLowLevelSupported);
+				var isValid = (minimum < maximum) && (minimum <= current) && (current <= maximum);
+				GetBrightness = $"Success: {isGetSuccess}" + (isGetSuccess ? $", Valid: {isValid} (Minimum: {minimum}, Current: {current}, Maximum: {maximum})" : string.Empty);
+
+				var difference = (uint)(DateTime.Now.Ticks % 6 + 5); // Integer from 5 to 10
+				var expected = difference;
+				if (isGetSuccess && isValid)
+				{
+					expected = (current - minimum > maximum - current) ? current - difference : current + difference;
+					expected = Math.Min(maximum, Math.Max(minimum, expected));
+				}
+
+				var isSetSuccess = MonitorConfiguration.SetBrightness(Handle, expected, IsLowLevelSupported);
+				var (_, _, actual, _) = MonitorConfiguration.GetBrightness(Handle, IsLowLevelSupported);
+				SetBrightness = $"Success: {isSetSuccess}" + (isSetSuccess ? $", Match: {expected == actual} (Expected: {expected}, Actual: {actual})" : string.Empty);
+
+				if (isSetSuccess)
+					MonitorConfiguration.SetBrightness(Handle, current, IsLowLevelSupported);
+			}
+		}
+
+		[DataContract]
 		private class MonitorData
 		{
+			[DataMember(Order = 0)]
+			public string System { get; private set; }
+
 			// When Name property of DataMemberAttribute contains a space or specific character 
 			// (e.g. !, ?), DataContractJsonSerializer.WriteObject method will internally throw 
 			// a System.Xml.XmlException while it will work fine.
-			[DataMember(Order = 0, Name = "Device Context - DeviceItems")]
+			[DataMember(Order = 1, Name = "Device Context - DeviceItems")]
 			public DeviceContext.DeviceItem[] DeviceItems { get; private set; }
 
-			[DataMember(Order = 1, Name = "Monitor Configuration - PhysicalItems")]
-			public Dictionary<DeviceContext.HandleItem, MonitorConfiguration.PhysicalItem[]> PhysicalItems { get; private set; }
+			[DataMember(Order = 2, Name = "Monitor Configuration - PhysicalItems")]
+			public Dictionary<DeviceContext.HandleItem, PhysicalItemPlus[]> PhysicalItems { get; private set; }
 
-			[DataMember(Order = 2, Name = "Device Installation - InstalledItems")]
+			[DataMember(Order = 3, Name = "Device Installation - InstalledItems")]
 			public DeviceInstallation.InstalledItem[] InstalledItems { get; private set; }
 
-			[DataMember(Order = 3, Name = "MSMonitorClass - DesktopItems")]
+			[DataMember(Order = 4, Name = "MSMonitorClass - DesktopItems")]
 			public MSMonitor.DesktopItem[] DesktopItems { get; private set; }
 
-			[DataMember(Order = 4, Name = "DisplayMonitor - DisplayItems")]
+			[DataMember(Order = 5, Name = "DisplayMonitor - DisplayItems")]
 			public DisplayInformation.DisplayItem[] DisplayItems { get; private set; }
 
-			[DataMember(Order = 5)]
+			[DataMember(Order = 6)]
 			public string[] ElapsedTime { get; private set; }
 
 			public MonitorData()
@@ -204,45 +265,55 @@ namespace Monitorian.Core.Models.Monitor
 
 			public async Task PopulateAsync()
 			{
+				System = GetSystem();
+
 				var sw = new Stopwatch();
 
-				var actions = new[]
+				var tasks = new[]
 				{
-					GetAction(nameof(DeviceItems), () =>
+					GetTask(nameof(DeviceItems), () =>
 						DeviceItems = DeviceContext.EnumerateMonitorDevices().ToArray()),
 
-					GetAction(nameof(PhysicalItems), () =>
+					GetTask(nameof(PhysicalItems), () =>
 						PhysicalItems = DeviceContext.GetMonitorHandles().ToDictionary(
 							x => x,
-							x => MonitorConfiguration.EnumeratePhysicalMonitors(x.MonitorHandle, true).ToArray())),
+							x => MonitorConfiguration.EnumeratePhysicalMonitors(x.MonitorHandle, true)
+								.Select(x => new PhysicalItemPlus(x))
+								.ToArray())),
 
-					GetAction(nameof(InstalledItems), () =>
+					GetTask(nameof(InstalledItems), () =>
 						InstalledItems = DeviceInstallation.EnumerateInstalledMonitors().ToArray()),
 
-					GetAction(nameof(DesktopItems), () =>
+					GetTask(nameof(DesktopItems), () =>
 						DesktopItems = MSMonitor.EnumerateDesktopMonitors().ToArray()),
 
-					GetAction(nameof(DisplayItems), async () =>
+					GetTask(nameof(DisplayItems), async () =>
 					{
 						if (OsVersion.Is10Redstone4OrNewer)
 							DisplayItems = await DisplayInformation.GetDisplayMonitorsAsync();
 					})
 				};
 
-				ElapsedTime = new string[actions.Length];
-
 				sw.Start();
 
-				await Task.WhenAll(actions.Select((x, index) => Task.Run(() => x.Invoke(index))));
+				ElapsedTime = await Task.WhenAll(tasks);
 
 				sw.Stop();
 
-				Action<int> GetAction(string name, Action action) =>
-					new Action<int>((index) =>
+				Task<string> GetTask(string name, Action action) =>
+					Task.Run(() =>
 					{
 						action.Invoke();
-						ElapsedTime[index] = $"{name} -> {sw.ElapsedMilliseconds}";
+						var elapsed = sw.Elapsed;
+						return $@"{name,-14} -> {elapsed.ToString($@"{(elapsed.Minutes > 0 ? @"m\:" : string.Empty)}s\.fff")}";
 					});
+			}
+
+			private string GetSystem()
+			{
+				using var @class = new ManagementClass("Win32_ComputerSystem");
+				using var instance = @class.GetInstances().Cast<ManagementObject>().FirstOrDefault();
+				return $"Manufacturer: {instance?["Manufacturer"]}, Model: {instance?["Model"]}";
 			}
 		}
 

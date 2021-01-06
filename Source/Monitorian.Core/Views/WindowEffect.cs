@@ -178,12 +178,12 @@ namespace Monitorian.Core.Views
 
 			var colorPairs = ColorPairs;
 			var colors = new Dictionary<ColorElement, Brush>();
-			var args = Environment.GetCommandLineArgs();
+			var arguments = AppKeeper.DefinedArguments;
 
-			int i = 1; // Skip 0.
-			while (i < args.Length - 1)
+			int i = 0;
+			while (i < arguments.Count - 1)
 			{
-				if (colorPairs.TryGetValue(args[i], out ColorElement key) && TryParse(args[i + 1], out Brush value))
+				if (colorPairs.TryGetValue(arguments[i], out ColorElement key) && TryParse(arguments[i + 1], out Brush value))
 				{
 					colors[key] = value;
 					i++;
@@ -343,15 +343,14 @@ namespace Monitorian.Core.Views
 			const string keyName = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 			const string valueName = "EnableTransparency";
 
-			using (var key = Registry.CurrentUser.OpenSubKey(keyName))
+			using var key = Registry.CurrentUser.OpenSubKey(keyName);
+
+			return key?.GetValue(valueName) switch
 			{
-				return key?.GetValue(valueName) switch
-				{
-					0 => false, // Off
-					1 => true,  // On
-					_ => false
-				};
-			}
+				0 => false, // Off
+				1 => true,  // On
+				_ => false
+			};
 		}
 
 		private static bool IsColorizationOpaqueBlendOn()
@@ -359,15 +358,14 @@ namespace Monitorian.Core.Views
 			const string keyName = @"Software\Microsoft\Windows\DWM";
 			const string valueName = "ColorizationOpaqueBlend";
 
-			using (var key = Registry.CurrentUser.OpenSubKey(keyName))
+			using var key = Registry.CurrentUser.OpenSubKey(keyName);
+
+			return key?.GetValue(valueName) switch
 			{
-				return key?.GetValue(valueName) switch
-				{
-					0 => true,  // On
-					1 => false, // Off
-					_ => false
-				};
-			}
+				0 => true,  // On
+				1 => false, // Off
+				_ => false
+			};
 		}
 
 		#endregion

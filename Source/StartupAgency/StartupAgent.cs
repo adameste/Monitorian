@@ -30,7 +30,7 @@ namespace StartupAgency
 		/// <para>response: Response from another instance if that instance exists and returns an response</para> 
 		/// </returns>
 		/// <remarks>Startup task ID must match that in AppxManifest.xml.</remarks>
-		public (bool success, object response) Start(string name, string startupTaskId, IReadOnlyCollection<string> args)
+		public (bool success, object response) Start(string name, string startupTaskId, IReadOnlyList<string> args)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 				throw new ArgumentNullException(nameof(name));
@@ -95,8 +95,8 @@ namespace StartupAgency
 		/// </remarks>
 		public event EventHandler<StartupRequestEventArgs> Requested
 		{
-			add { if (_holder != null) { _holder.Requested += value; } }
-			remove { if (_holder != null) { _holder.Requested -= value; } }
+			add { if (_holder is not null) { _holder.Requested += value; } }
+			remove { if (_holder is not null) { _holder.Requested -= value; } }
 		}
 
 		private const string HideOption = "/hide";
@@ -104,10 +104,10 @@ namespace StartupAgency
 		/// <summary>
 		/// Options
 		/// </summary>
-		public static IReadOnlyCollection<string> Options => new string[] { HideOption };
+		public static IReadOnlyCollection<string> Options => new[] { HideOption };
 
 		/// <summary>
-		/// Whether caller instance is expected to show its window
+		/// Determines whether caller instance is expected to show its window.
 		/// </summary>
 		/// <returns>True if expected to be show its window</returns>
 		public bool IsWindowShowExpected()
@@ -119,7 +119,7 @@ namespace StartupAgency
 		#region Register/Unregister
 
 		/// <summary>
-		/// Whether caller instance is presumed to have started on sign in
+		/// Determines whether caller instance is presumed to have started on sign in.
 		/// </summary>
 		/// <returns>True if presumed to have started on sign in</returns>
 		public bool IsStartedOnSignIn()
@@ -129,7 +129,7 @@ namespace StartupAgency
 		}
 
 		/// <summary>
-		/// Whether caller instance can be registered in startup
+		/// Determines whether caller instance can be registered in startup.
 		/// </summary>
 		/// <returns>True if can be registered</returns>
 		public bool CanRegister()
@@ -139,7 +139,7 @@ namespace StartupAgency
 		}
 
 		/// <summary>
-		/// Whether caller instance has been registered in startup
+		/// Determines whether caller instance has been registered in startup.
 		/// </summary>
 		/// <returns>True if has been already registered</returns>
 		public bool IsRegistered()

@@ -101,6 +101,8 @@ namespace ScreenFrame
 
 		#endregion
 
+		#region DPI
+
 		private const double DefaultPixelsPerInch = 96D; // Default pixels per Inch
 
 		/// <summary>
@@ -228,6 +230,10 @@ namespace ScreenFrame
 			return Marshal.PtrToStructure<RECT>(lParam);
 		}
 
+		#endregion
+
+		#region VisualTree
+
 		/// <summary>
 		/// Attempts to get the first ancestor visual of a specified visual.
 		/// </summary>
@@ -239,7 +245,7 @@ namespace ScreenFrame
 		{
 			var parent = reference;
 
-			while (parent != null)
+			while (parent is not null)
 			{
 				parent = VisualTreeHelper.GetParent(parent);
 				if (parent is T buffer)
@@ -265,7 +271,7 @@ namespace ScreenFrame
 			var queue = new Queue<DependencyObject>();
 			var parent = reference;
 
-			while (parent != null)
+			while (parent is not null)
 			{
 				var count = VisualTreeHelper.GetChildrenCount(parent);
 				for (int i = 0; i < count; i++)
@@ -285,5 +291,7 @@ namespace ScreenFrame
 			descendant = default;
 			return false;
 		}
+
+		#endregion
 	}
 }

@@ -11,7 +11,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 using Monitorian.Core.Helper;
 using Monitorian.Core.Models;
@@ -103,7 +102,7 @@ namespace Monitorian.Core.Views
 		{
 			_defaultHeights = this.Resources.Cast<DictionaryEntry>()
 				.Where(x => ((string)x.Key).EndsWith("Height", StringComparison.Ordinal))
-				.Where(x => (x.Value is double height) && (0 < height))
+				.Where(x => x.Value is double height and > 0D)
 				.ToDictionary(x => (string)x.Key, x => (double)x.Value);
 		}
 
@@ -161,7 +160,7 @@ namespace Monitorian.Core.Views
 
 				base.Show();
 
-				if (currentFocusedElement != null)
+				if (currentFocusedElement is not null)
 				{
 					var restoredFocusedElement = FocusManager.GetFocusedElement(this);
 					if (restoredFocusedElement != currentFocusedElement)

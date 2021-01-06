@@ -50,7 +50,7 @@ namespace Monitorian.Core.Models
 		#endregion
 
 		/// <summary>
-		/// Whether output is redirected from the standard output stream.
+		/// Determines whether output is redirected from the standard output stream.
 		/// </summary>
 		/// <returns>True if output is redirected</returns>
 		/// <remarks>
@@ -84,7 +84,7 @@ namespace Monitorian.Core.Models
 		/// <returns>True if successfully starts</returns>
 		public static bool TryStartWrite()
 		{
-			if (Debugger.IsAttached || (_listener != null))
+			if (Debugger.IsAttached || (_listener is not null))
 				return false;
 
 			if (IsOutputRedirected())
@@ -122,7 +122,7 @@ namespace Monitorian.Core.Models
 
 		public static bool Write(string content)
 		{
-			if (Debugger.IsAttached || (_listener != null))
+			if (Debugger.IsAttached || (_listener is not null))
 			{
 				Trace.WriteLine(content);
 				return true;

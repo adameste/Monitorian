@@ -166,16 +166,16 @@ namespace Monitorian.Core.Models.Monitor
 		public class DeviceItem
 		{
 			[DataMember(Order = 0)]
-			public string DeviceInstanceId { get; private set; }
+			public string DeviceInstanceId { get; }
 
 			[DataMember(Order = 1)]
-			public string Description { get; private set; }
+			public string Description { get; }
 
 			[DataMember(Order = 2)]
-			public byte DisplayIndex { get; private set; }
+			public byte DisplayIndex { get; }
 
 			[DataMember(Order = 3)]
-			public byte MonitorIndex { get; private set; }
+			public byte MonitorIndex { get; }
 
 			public DeviceItem(
 				string deviceInstanceId,
@@ -194,7 +194,7 @@ namespace Monitorian.Core.Models.Monitor
 		public class HandleItem
 		{
 			[DataMember]
-			public int DisplayIndex { get; private set; }
+			public int DisplayIndex { get; }
 
 			public IntPtr MonitorHandle { get; }
 
@@ -363,7 +363,7 @@ namespace Monitorian.Core.Models.Monitor
 
 		private static bool RotateDisplay(string displayName, ref DEVMODE dm, DMDO orientation)
 		{
-			static bool IsLandscape(DMDO value) => (value == DMDO.DMDO_DEFAULT) || (value == DMDO.DMDO_180);
+			static bool IsLandscape(DMDO value) => (value is DMDO.DMDO_DEFAULT or DMDO.DMDO_180);
 
 			if (IsLandscape(dm.dmDisplayOrientation) != IsLandscape(orientation))
 			{
