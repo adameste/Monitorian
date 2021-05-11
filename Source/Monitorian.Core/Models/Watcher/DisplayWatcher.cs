@@ -20,15 +20,14 @@ namespace Monitorian.Core.Models.Watcher
 			SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 		}
 
+		public void RaiseDisplaySettingsChanged() => OnDisplaySettingsChanged(this, EventArgs.Empty);
+
 		private void OnDisplaySettingsChanged(object sender, EventArgs e)
 		{
 			TimerStart();
 		}
 
-		protected override void TimerTick()
-		{
-			_onDisplaySettingsChanged?.Invoke();
-		}
+		protected override void TimerTick() => _onDisplaySettingsChanged?.Invoke();
 
 		#region IDisposable
 

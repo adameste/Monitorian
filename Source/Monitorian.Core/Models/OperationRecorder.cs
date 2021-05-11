@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,28 +9,83 @@ using Monitorian.Core.Helper;
 
 namespace Monitorian.Core.Models
 {
-	internal class OperationRecorder
+	public class OperationRecorder
 	{
-		public OperationRecorder(string message) => LogService.RecordOperation(message);
+		private OperationRecorder()
+		{ }
 
-		public void Record(string content) => LogService.RecordOperation(content);
+		public static async Task<OperationRecorder> CreateAsync(string message)
+		{
+			await LogService.PrepareOperationAsync();
+			await LogService.RecordOperationAsync(message);
+
+			return new();
+		}
+
+		public Task RecordAsync(string content) => LogService.RecordOperationAsync(content);
+
+		#region Line
+
+		private readonly Lazy<Throttle<string>> _record = new(() => new(
+			TimeSpan.FromSeconds(1),
+			async queue => await LogService.RecordOperationAsync(string.Join(Environment.NewLine, queue))));
+
+		private readonly Lazy<ConcurrentDictionary<string, List<string>>> _actionLines = new(() => new());
+
+		/// <summary>
+		/// Starts a record consisting of lines (concurrent).
+		/// </summary>
+		/// <param name="key">Unique key</param>
+		/// <param name="actionName">Action name</param>
+		public void StartLineRecord(string key, string actionName)
+		{
+			_actionLines.Value[key] = new List<string>(new[] { actionName });
+		}
+
+		public void AddLineRecord(string key, string lineString)
+		{
+			if (_actionLines.Value.TryGetValue(key, out var lines))
+				lines.Add(lineString);
+		}
+
+		public async Task EndLineRecordAsync(string key)
+		{
+			if (_actionLines.Value.TryGetValue(key, out var lines))
+			{
+				await _record.Value.PushAsync(string.Join(Environment.NewLine, lines));
+				_actionLines.Value.TryRemove(key, out _);
+			}
+		}
+
+		#endregion
+
+		#region Group
 
 		private string _actionName;
+		private readonly Lazy<List<(string groupName, StringWrapper item)>> _actionGroups = new(() => new());
 
-		public void StartRecord(string actionName) => this._actionName = actionName;
+		/// <summary>
+		/// Starts a record consisting of groups of lines (non-concurrent).
+		/// </summary>
+		/// <param name="actionName">Action name</param>
+		public void StartGroupRecord(string actionName) => this._actionName = actionName;
 
-		private readonly List<(string group, StringWrapper item)> _groups = new List<(string, StringWrapper)>();
+		public void AddGroupRecordItem(string groupName, string itemString) =>
+			_actionGroups.Value.Add((groupName, new StringWrapper(itemString)));
 
-		public void AddItem(string groupName, string itemString) => _groups.Add((groupName, new StringWrapper(itemString)));
-		public void AddItems(string groupName, IEnumerable<string> itemStrings) => _groups.AddRange(itemStrings.Select(x => (groupName, new StringWrapper(x))));
+		public void AddGroupRecordItems(string groupName, IEnumerable<string> itemStrings) =>
+			_actionGroups.Value.AddRange(itemStrings.Select(x => (groupName, new StringWrapper(x))));
 
-		public void StopRecord()
+		public async Task EndGroupRecordAsync()
 		{
-			var groupsStrings = _groups.GroupBy(x => x.group).Select(x => (x.Key, (object)x.Select(y => y.item))).ToArray();
+			var groupsStrings = _actionGroups.Value.GroupBy(x => x.groupName).Select(x => (x.Key, (object)x.Select(y => y.item))).ToArray();
 
-			LogService.RecordOperation($"{_actionName}{Environment.NewLine}{SimpleSerialization.Serialize(groupsStrings)}");
+			await LogService.RecordOperationAsync($"{_actionName}{Environment.NewLine}{SimpleSerialization.Serialize(groupsStrings)}");
 
-			_groups.Clear();
+			_actionName = null;
+			_actionGroups.Value.Clear();
 		}
+
+		#endregion
 	}
 }

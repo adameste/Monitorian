@@ -8,7 +8,6 @@ using System.Windows.Threading;
 
 using Monitorian.Core.Models;
 using Monitorian.Core.Views;
-
 using StartupAgency;
 
 namespace Monitorian.Core
@@ -28,7 +27,7 @@ namespace Monitorian.Core
 			{
 				StartupAgent.Options,
 				LanguageService.Options,
-				UserInteraction.Options,
+				SettingsCore.Options,
 				WindowEffect.Options
 			}
 			.SelectMany(x => x)
@@ -39,7 +38,7 @@ namespace Monitorian.Core
 
 		public AppKeeper(string[] args, params string[] definedOptions)
 		{
-			if (args?.Any() == true)
+			if (args?.Any() is true)
 			{
 				const char optionMark = '/';
 				var isDefined = false;
@@ -84,11 +83,10 @@ namespace Monitorian.Core
 			ConsoleService.EndWrite();
 		}
 
-		public void Write(object content)
+		public void Write(string content)
 		{
-			var buffer = content?.ToString();
-			if (!string.IsNullOrEmpty(buffer))
-				ConsoleService.Write(buffer);
+			if (!string.IsNullOrEmpty(content))
+				ConsoleService.Write(content);
 		}
 
 		#region Exception

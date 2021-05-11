@@ -76,7 +76,7 @@ namespace Monitorian.Core.Models.Watcher
 
 		public void RegisterPowerSettingEvent(IReadOnlyCollection<Guid> settingGuids)
 		{
-			if (!(settingGuids?.Any() == true))
+			if (settingGuids?.Any() is not true)
 				return;
 
 			if (!TryGetSystemEventsWindowHandle(out IntPtr windowHandle))
@@ -135,7 +135,7 @@ namespace Monitorian.Core.Models.Watcher
 		{
 			PowerSettingChanged = null;
 
-			if (_registrationHandles?.Any() == true)
+			if (_registrationHandles?.Any() is true)
 			{
 				foreach (var handle in _registrationHandles)
 					UnregisterPowerSettingNotification(handle);
@@ -152,6 +152,6 @@ namespace Monitorian.Core.Models.Watcher
 		public Guid Guid { get; }
 		public int Data { get; }
 
-		public PowerSettingChangedEventArgs(Guid guid, int data) => (Guid, Data) = (guid, data);
+		public PowerSettingChangedEventArgs(Guid guid, int data) => (this.Guid, this.Data) = (guid, data);
 	}
 }
