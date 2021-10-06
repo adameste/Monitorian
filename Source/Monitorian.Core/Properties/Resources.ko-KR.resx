@@ -135,9 +135,6 @@
   <data name="MakeOperation" xml:space="preserve">
     <value>작업 로그 만들기</value>
   </data>
-  <data name="Probe" xml:space="preserve">
-    <value>Probe into monitors</value>
-  </data>
   <data name="RecordExceptionMessage" xml:space="preserve">
     <value>예상치 못한 문제가 발생했습니다. 예외 로그를 데스크톱에 저장하시겠습니까?</value>
   </data>
@@ -149,9 +146,6 @@
   </data>
   <data name="ShowAdjusted" xml:space="preserve">
     <value>조정된 밝기를 표시합니다</value>
-  </data>
-  <data name="SiteUrl" xml:space="preserve">
-    <value>https://github.com/emoacht/Monitorian</value>
   </data>
   <data name="StartSignIn" xml:space="preserve">
     <value>로그인 시 시작합니다.</value>
@@ -166,6 +160,6 @@
     <value>DDC/CI가 지원되지 않거나 사용할 수 없습니다.</value>
   </data>
   <data name="UseLargeElements" xml:space="preserve">
-    <value>큰 버튼 사용</value>
+    <value>큰 슬라이더 사용</value>
   </data>
 </root>

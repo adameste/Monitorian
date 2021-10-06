@@ -18,6 +18,18 @@ namespace Monitorian.Core.ViewModels
 		public ProbeSectionViewModel(AppControllerCore controller)
 		{
 			this._controller = controller ?? throw new ArgumentNullException(nameof(controller));
+
+			Task.Run(async () => Arguments = await _controller.LoadArgumentsAsync());
+
+			PropertyChanged += async (_, e) =>
+			{
+				switch (e.PropertyName)
+				{
+					case nameof(Arguments):
+						await _controller.SaveArgumentsAsync(Arguments?.Trim());
+						break;
+				}
+			};
 		}
 
 		public bool CanProbe
@@ -34,13 +46,8 @@ namespace Monitorian.Core.ViewModels
 			Task.Run(async () =>
 			{
 				var log = await MonitorManager.ProbeMonitorsAsync();
-				LogService.RecordProbe(log);
+				Logger.RecordProbe(log);
 			});
-		}
-
-		public void PerformCopy()
-		{
-			Task.Run(() => LogService.CopyOperationAsync());
 		}
 
 		public void PerformRescan()
@@ -52,5 +59,17 @@ namespace Monitorian.Core.ViewModels
 				SystemSounds.Asterisk.Play();
 			});
 		}
+
+		public void PerformCopy()
+		{
+			Task.Run(() => Logger.CopyOperationAsync());
+		}
+
+		public string Arguments
+		{
+			get => _arguments;
+			set => SetPropertyValue(ref _arguments, value);
+		}
+		private string _arguments;
 	}
 }

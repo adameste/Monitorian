@@ -1,39 +1,57 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Resources;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Monitorian.Core.Properties;
 
 namespace Monitorian.Core.Models
 {
 	public class LanguageService
 	{
-		private static IReadOnlyDictionary<string, string> PreparedCulturePairs => new Dictionary<string, string>
+		public static IReadOnlyCollection<string> Options => new[] { Option };
+		private const string Option = "/lang";
+
+		private static readonly Lazy<CultureInfo> _culture = new(() =>
 		{
-			{ "/en", "en-US" },
-			{ "/ja", "ja-JP" },
-			{ "/ko", "ko-KR" },
-			{ "/pl", "pl-PL" },
-			{ "/ru", "ru-RU" },
-			{ "/zh", "zh-Hans" },
-		};
+			var arguments = AppKeeper.DefinedArguments;
 
-		public static IReadOnlyCollection<string> Options => PreparedCulturePairs.Keys.ToArray();
-
-		private static readonly Lazy<CultureInfo> _culture = new Lazy<CultureInfo>(() =>
-		{
-			var preparedCulturePairs = PreparedCulturePairs;
-			var supportedCultureNames = new HashSet<string>(CultureInfo.GetCultures(CultureTypes.AllCultures).Select(x => x.Name));
-
-			return AppKeeper.DefinedArguments
-				.Where(x => !string.IsNullOrWhiteSpace(x))
-				.Select(x => (Success: preparedCulturePairs.TryGetValue(x.ToLower(), out string value) && supportedCultureNames.Contains(value), CultureName: value))
-				.Where(x => x.Success)
-				.Select(x => new CultureInfo(x.CultureName))
-				.FirstOrDefault();
+			int i = 0;
+			while (i < arguments.Count - 1)
+			{
+				if (string.Equals(arguments[i], Option, StringComparison.OrdinalIgnoreCase))
+				{
+					var cultureName = arguments[i + 1];
+					return CultureInfo.GetCultures(CultureTypes.AllCultures)
+						.FirstOrDefault(x => string.Equals(x.Name, cultureName, StringComparison.OrdinalIgnoreCase));
+				}
+				i++;
+			}
+			return null;
 		});
+
+		public static IReadOnlyDictionary<string, string> ResourceDictionary => _resourceDictionary.Value;
+		private static readonly Lazy<Dictionary<string, string>> _resourceDictionary = new(() =>
+		{
+			if (_culture.Value is not null)
+			{
+				var resourceSet = new ResourceManager(typeof(Resources)).GetResourceSet(_culture.Value, true, false);
+				if (resourceSet is not null)
+				{
+					return resourceSet.Cast<DictionaryEntry>()
+						.Where(x => x.Key is string)
+						.ToDictionary(x => (string)x.Key, x => x.Value?.ToString());
+				}
+			}
+			return new Dictionary<string, string>();
+		});
+
+		public static bool IsResourceRightToLeft => (_culture.Value?.TextInfo.IsRightToLeft is true);
 
 		/// <summary>
 		/// Switches default and current threads' culture.

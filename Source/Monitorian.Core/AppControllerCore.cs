@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Threading;
-using Microsoft.Win32;
 
 using Monitorian.Core.Models;
 using Monitorian.Core.Models.Monitor;
@@ -34,8 +33,10 @@ namespace Monitorian.Core
 		protected readonly object _monitorsLock = new object();
 
 		public NotifyIconContainer NotifyIconContainer { get; }
+		public WindowPainter WindowPainter { get; }
 
 		private readonly DisplayWatcher _displayWatcher;
+		private readonly SessionWatcher _sessionWatcher;
 		private readonly PowerWatcher _powerWatcher;
 		private readonly BrightnessWatcher _brightnessWatcher;
 
@@ -52,8 +53,10 @@ namespace Monitorian.Core
 			BindingOperations.EnableCollectionSynchronization(Monitors, _monitorsLock);
 
 			NotifyIconContainer = new NotifyIconContainer();
+			WindowPainter = new WindowPainter();
 
 			_displayWatcher = new DisplayWatcher();
+			_sessionWatcher = new SessionWatcher();
 			_powerWatcher = new PowerWatcher();
 			_brightnessWatcher = new BrightnessWatcher();
 		}
@@ -69,7 +72,6 @@ namespace Monitorian.Core
 			NotifyIconContainer.ShowIcon("pack://application:,,,/Monitorian.Core;component/Resources/Icons/TrayIcon.ico", ProductInfo.Title);
 
 			_current.MainWindow = new MainWindow(this);
-			_current.MainWindow.Deactivated += (sender, e) => MonitorsResetByKey();
 
 			if (StartupAgent.IsWindowShowExpected())
 				_current.MainWindow.Show();
@@ -82,16 +84,20 @@ namespace Monitorian.Core
 			NotifyIconContainer.MouseRightButtonClick += OnMenuWindowShowRequested;
 
 			_displayWatcher.Subscribe(() => OnMonitorsChangeInferred(nameof(DisplayWatcher)));
-			_powerWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(PowerWatcher), e.Mode, e.Count), PowerManagement.GetOnPowerSettingChanged());
+			_sessionWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(SessionWatcher), e));
+			_powerWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(PowerWatcher), e), PowerManagement.GetOnPowerSettingChanged());
 			_brightnessWatcher.Subscribe((instanceName, brightness) => Update(instanceName, brightness));
 		}
 
 		public virtual void End()
 		{
 			MonitorsDispose();
+
 			NotifyIconContainer.Dispose();
+			WindowPainter.Dispose();
 
 			_displayWatcher.Dispose();
+			_sessionWatcher.Dispose();
 			_powerWatcher.Dispose();
 			_brightnessWatcher.Dispose();
 		}
@@ -138,7 +144,7 @@ namespace Monitorian.Core
 		{
 			var window = new MenuWindow(this, pivot);
 			window.ViewModel.CloseAppRequested += (sender, e) => _current.Shutdown();
-			window.AddMenuItem(new ProbeSection(this));
+			window.MenuSectionTop.Add(new ProbeSection(this));
 			window.Show();
 		}
 
@@ -152,8 +158,22 @@ namespace Monitorian.Core
 		{
 			switch (e.PropertyName)
 			{
-				case nameof(Settings.EnablesUnison):
-					OnSettingsEnablesUnisonChanged();
+				case nameof(Settings.EnablesUnison) when !Settings.EnablesUnison:
+					foreach (var m in Monitors)
+						m.IsUnison = false;
+
+					break;
+
+				case nameof(Settings.EnablesRange) when !Settings.EnablesRange:
+					foreach (var m in Monitors)
+						m.IsRangeChanging = false;
+
+					break;
+
+				case nameof(Settings.EnablesContrast) when !Settings.EnablesContrast:
+					foreach (var m in Monitors)
+						m.IsContrastChanging = false;
+
 					break;
 
 				case nameof(Settings.MakesOperationLog):
@@ -164,11 +184,11 @@ namespace Monitorian.Core
 
 		#region Monitors
 
-		protected virtual async void OnMonitorsChangeInferred(object sender = null, PowerModes mode = default, int? count = null)
+		protected virtual async void OnMonitorsChangeInferred(object sender = null, ICountEventArgs e = null)
 		{
-			await (Recorder?.RecordAsync($"{nameof(OnMonitorsChangeInferred)} ({sender}{(mode == default ? string.Empty : $"- {mode} {count}")})") ?? Task.CompletedTask);
+			await (Recorder?.RecordAsync($"{nameof(OnMonitorsChangeInferred)} ({sender}{e?.Description})") ?? Task.CompletedTask);
 
-			if (count == 0)
+			if (e?.Count == 0)
 				return;
 
 			await ScanAsync(TimeSpan.FromSeconds(3));
@@ -333,7 +353,11 @@ namespace Monitorian.Core
 					{
 						await Task.WhenAll(Monitors
 							.Where(x => x.IsTarget)
-							.Select(x => Task.Run(() => x.UpdateBrightness())));
+							.SelectMany(x => new[]
+							{
+								Task.Run(() => x.UpdateBrightness()),
+								(x.IsContrastChanging ? Task.Run(() => x.UpdateContrast()) : Task.CompletedTask),
+							}));
 					}
 				}
 			}
@@ -349,6 +373,7 @@ namespace Monitorian.Core
 		protected virtual void Update(string instanceName, int brightness)
 		{
 			var monitor = Monitors.FirstOrDefault(x => instanceName.StartsWith(x.DeviceInstanceId, StringComparison.OrdinalIgnoreCase));
+			EnsureUnisonWorkable(monitor);
 			monitor?.UpdateBrightness(brightness);
 		}
 
@@ -356,14 +381,6 @@ namespace Monitorian.Core
 		{
 			foreach (var m in Monitors)
 				m.Dispose();
-		}
-
-		private void MonitorsResetByKey()
-		{
-			var monitor = Monitors.FirstOrDefault(x => x.IsSelectedByKey);
-
-			if (monitor is not null)
-				monitor.IsByKey = false;
 		}
 
 		protected MonitorViewModel SelectedMonitor { get; private set; }
@@ -381,22 +398,13 @@ namespace Monitorian.Core
 
 		#region Customization
 
-		private void OnSettingsEnablesUnisonChanged()
-		{
-			if (Settings.EnablesUnison)
-				return;
-
-			foreach (var m in Monitors)
-				m.IsUnison = false;
-		}
-
 		protected internal virtual bool TryLoadCustomization(string deviceInstanceId, ref string name, ref bool isUnison, ref byte lowest, ref byte highest)
 		{
 			if (Settings.MonitorCustomizations.TryGetValue(deviceInstanceId, out MonitorCustomizationItem m)
 				&& (m.Lowest < m.Highest) && (m.Highest <= 100))
 			{
 				name = m.Name;
-				isUnison = m.IsUnison;
+				isUnison = Settings.EnablesUnison && m.IsUnison;
 				lowest = m.Lowest;
 				highest = m.Highest;
 				return true;
@@ -417,6 +425,31 @@ namespace Monitorian.Core
 				Settings.MonitorCustomizations.Remove(deviceInstanceId);
 			}
 		}
+
+		private bool _isUnisonWorkable;
+
+		protected virtual void EnsureUnisonWorkable(MonitorViewModel monitor)
+		{
+			if (_isUnisonWorkable || (monitor?.IsUnison is not true))
+				return;
+
+			_current.Dispatcher.Invoke(() =>
+			{
+				if (!_current.MainWindow.IsLoaded)
+				{
+					((MainWindow)_current.MainWindow).ShowUnnoticed();
+				}
+				_isUnisonWorkable = true;
+			});
+		}
+
+		#endregion
+
+		#region Arguments
+
+		public Task<string> LoadArgumentsAsync() => _keeper.LoadArgumentsAsync();
+
+		public Task SaveArgumentsAsync(string content) => _keeper.SaveArgumentsAsync(content);
 
 		#endregion
 	}

@@ -32,6 +32,12 @@ namespace ScreenFrame.Movers
 		public override PivotAlignment PivotAlignment { get; protected set; }
 
 		/// <summary>
+		/// Gets Per-Monitor DPI of the monitor.
+		/// </summary>
+		/// <returns>DPI information</returns>
+		protected override DpiScale GetDpi() => VisualTreeHelperAddition.GetDpi(_pivot);
+
+		/// <summary>
 		/// Attempts to get the adjacent location using specified window width and height.
 		/// </summary>
 		/// <param name="windowWidth">Window width</param>
@@ -50,7 +56,7 @@ namespace ScreenFrame.Movers
 		/// <returns>True if successfully gets</returns>
 		protected bool TryGetAdjacentLocationToPivot(double windowWidth, double windowHeight, out Rect location)
 		{
-			if (!WindowHelper.TryGetTaskbar(out _, out TaskbarAlignment taskbarAlignment))
+			if (!WindowHelper.TryGetTaskbar(out _, out TaskbarAlignment taskbarAlignment, out _))
 			{
 				location = default;
 				return false;

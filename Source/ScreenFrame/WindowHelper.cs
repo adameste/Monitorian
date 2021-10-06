@@ -9,7 +9,10 @@ using System.Windows.Interop;
 
 namespace ScreenFrame
 {
-	internal static class WindowHelper
+	/// <summary>
+	/// Utility methods for <see cref="System.Windows.Window"/>
+	/// </summary>
+	public static class WindowHelper
 	{
 		#region Win32
 
@@ -19,6 +22,11 @@ namespace ScreenFrame
 			IntPtr hwndChildAfter,
 			string lpszClass,
 			string lpszWindow);
+
+		[DllImport("User32.dll")]
+		private static extern IntPtr MonitorFromPoint(
+			POINT pt,
+			MONITOR_DEFAULTTO dwFlags);
 
 		[DllImport("User32.dll")]
 		private static extern IntPtr MonitorFromRect(
@@ -50,12 +58,12 @@ namespace ScreenFrame
 
 		[DllImport("User32.dll", CharSet = CharSet.Unicode)]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		public static extern bool GetMonitorInfo(
+		private static extern bool GetMonitorInfo(
 			IntPtr hMonitor,
 			ref MONITORINFO lpmi);
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-		public struct MONITORINFO
+		private struct MONITORINFO
 		{
 			public uint cbSize;
 			public RECT rcMonitor;
@@ -64,7 +72,7 @@ namespace ScreenFrame
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct POINT
+		internal struct POINT
 		{
 			public int x;
 			public int y;
@@ -74,7 +82,7 @@ namespace ScreenFrame
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct RECT
+		internal struct RECT
 		{
 			public int left;
 			public int top;
@@ -134,7 +142,7 @@ namespace ScreenFrame
 			SWP uFlags);
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct WINDOWPOS
+		internal struct WINDOWPOS
 		{
 			public IntPtr hwnd;
 			public IntPtr hwndInsertAfter;
@@ -145,7 +153,8 @@ namespace ScreenFrame
 			public SWP flags;
 		}
 
-		public enum SWP : uint
+
+		internal enum SWP : uint
 		{
 			SWP_ASYNCWINDOWPOS = 0x4000,
 			SWP_DEFERERASE = 0x2000,
@@ -205,18 +214,37 @@ namespace ScreenFrame
 			DWMWA_LAST
 		}
 
-		public const int S_OK = 0x0;
-		public const int S_FALSE = 0x1;
+		internal const int S_OK = 0x0;
+		internal const int S_FALSE = 0x1;
 
-		[DllImport("User32.dll", SetLastError = true)]
+		[DllImport("User32.dll")]
 		private static extern IntPtr GetForegroundWindow();
 
-		[DllImport("Shell32.dll", SetLastError = true)]
+		[DllImport("User32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		private static extern bool SHAppBarMessage(
-			uint dwMessage, // ABM_GETTASKBARPOS
+		private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+		[DllImport("User32.dll")]
+		private static extern uint GetWindowThreadProcessId(
+			IntPtr hWnd,
+			out uint lpdwProcessId);
+
+		[DllImport("Kernel32.dll")]
+		private static extern uint GetCurrentThreadId();
+
+		[DllImport("User32.dll", SetLastError = true)]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		private static extern bool AttachThreadInput(
+			uint idAttach,
+			uint idAttachTo,
+			bool fAttach);
+
+		[DllImport("Shell32.dll", SetLastError = true)]
+		private static extern uint SHAppBarMessage(
+			uint dwMessage,
 			ref APPBARDATA pData);
 
+		private const uint ABM_GETSTATE = 0x00000004;
 		private const uint ABM_GETTASKBARPOS = 0x00000005;
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -236,6 +264,13 @@ namespace ScreenFrame
 			ABE_TOP = 1,
 			ABE_RIGHT = 2,
 			ABE_BOTTOM = 3
+		}
+
+		private enum ABS : uint
+		{
+			ABS_NORMAL = 0x0000000, // Undocumented name
+			ABS_AUTOHIDE = 0x0000001,
+			ABS_ALWAYSONTOP = 0x0000002
 		}
 
 		[DllImport("User32.dll", SetLastError = true)]
@@ -259,12 +294,41 @@ namespace ScreenFrame
 
 		#region Monitor
 
-		public static bool TryGetMonitorRect(Rect windowRect, out Rect monitorRect, out Rect workRect)
+		/// <summary>
+		/// Attempts to get monitor rectangle which includes a specified point.
+		/// </summary>
+		/// <param name="point">Point to be checked</param>
+		/// <param name="monitorRect">Monitor rectangle</param>
+		/// <param name="workRect">Working area rectangle</param>
+		/// <returns>True if successfully gets</returns>
+		public static bool TryGetMonitorRect(Point point, out Rect monitorRect, out Rect workRect)
 		{
-			RECT rect = windowRect;
-			var monitorHandle = MonitorFromRect(
-				ref rect,
+			var monitorHandle = MonitorFromPoint(
+				point,
 				MONITOR_DEFAULTTO.MONITOR_DEFAULTTONULL);
+
+			return TryGetMonitorRect(monitorHandle, out monitorRect, out workRect);
+		}
+
+		/// <summary>
+		/// Attempts to get monitor rectangle which includes a specified rectangle.
+		/// </summary>
+		/// <param name="rect">Rectangle to be checked</param>
+		/// <param name="monitorRect">Monitor rectangle</param>
+		/// <param name="workRect">Working area rectangle</param>
+		/// <returns>True if successfully gets</returns>
+		public static bool TryGetMonitorRect(Rect rect, out Rect monitorRect, out Rect workRect)
+		{
+			RECT buffer = rect;
+			var monitorHandle = MonitorFromRect(
+				ref buffer,
+				MONITOR_DEFAULTTO.MONITOR_DEFAULTTONULL);
+
+			return TryGetMonitorRect(monitorHandle, out monitorRect, out workRect);
+		}
+
+		private static bool TryGetMonitorRect(IntPtr monitorHandle, out Rect monitorRect, out Rect workRect)
+		{
 			if (monitorHandle != IntPtr.Zero)
 			{
 				var monitorInfo = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
@@ -283,7 +347,7 @@ namespace ScreenFrame
 			return false;
 		}
 
-		public static Rect[] GetMonitorRects()
+		internal static Rect[] GetMonitorRects()
 		{
 			var monitorRects = new List<Rect>();
 
@@ -324,7 +388,7 @@ namespace ScreenFrame
 
 		#region Window
 
-		public static bool SetWindowPosition(Window window, Rect position)
+		internal static bool SetWindowPosition(Window window, Rect position)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 
@@ -338,7 +402,7 @@ namespace ScreenFrame
 				SWP.SWP_NOZORDER);
 		}
 
-		public static bool TryGetWindowRect(Window window, out Rect windowRect)
+		internal static bool TryGetWindowRect(Window window, out Rect windowRect)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 
@@ -353,7 +417,7 @@ namespace ScreenFrame
 			return false;
 		}
 
-		public static bool TryGetDwmWindowRect(Window window, out Rect windowRect)
+		internal static bool TryGetDwmWindowRect(Window window, out Rect windowRect)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 
@@ -370,7 +434,7 @@ namespace ScreenFrame
 			return false;
 		}
 
-		public static bool TryGetDwmWindowMargin(Window window, out Thickness windowMargin)
+		internal static bool TryGetDwmWindowMargin(Window window, out Thickness windowMargin)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 
@@ -396,33 +460,110 @@ namespace ScreenFrame
 			return false;
 		}
 
+		internal static IEnumerable<SWP> EnumerateFlags(SWP flags) =>
+			Enum.GetValues(typeof(SWP)).Cast<SWP>().Where(x => flags.HasFlag(x));
+
+		/// <summary>
+		/// Determines if a specified window is foreground.
+		/// </summary>
+		/// <param name="window">Window to be determined</param>
+		/// <returns>True if foreground</returns>
 		public static bool IsForegroundWindow(Window window)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 			return windowHandle == GetForegroundWindow();
 		}
 
-		public static IEnumerable<SWP> EnumerateFlags(SWP flags) =>
-			Enum.GetValues(typeof(SWP)).Cast<SWP>().Where(x => flags.HasFlag(x));
+		/// <summary>
+		/// Ensures a specified window is foreground.
+		/// </summary>
+		/// <param name="window">Window to be ensured</param>
+		/// <returns>True if foreground</returns>
+		public static bool EnsureForegroundWindow(Window window)
+		{
+			var windowHandle = new WindowInteropHelper(window).Handle;
+
+			var foregroundHandle = GetForegroundWindow();
+			if (windowHandle == foregroundHandle)
+				return true;
+
+			var currentThreadId = GetCurrentThreadId();
+			var foregroundThreadId = GetWindowThreadProcessId(
+				foregroundHandle,
+				out _);
+
+			try
+			{
+				if (currentThreadId != foregroundThreadId)
+				{
+					AttachThreadInput(
+						currentThreadId,
+						foregroundThreadId,
+						true);
+				}
+
+				SetForegroundWindow(windowHandle);
+			}
+			finally
+			{
+				if (currentThreadId != foregroundThreadId)
+				{
+					AttachThreadInput(
+						currentThreadId,
+						foregroundThreadId,
+						false);
+				}
+			}
+
+			return (windowHandle == GetForegroundWindow());
+		}
 
 		#endregion
 
 		#region Taskbar
 
-		public static bool TryGetTaskbar(out Rect taskbarRect, out TaskbarAlignment taskbarAlignment)
+		internal static bool IsTaskbarAutoHide()
 		{
 			var data = new APPBARDATA { cbSize = (uint)Marshal.SizeOf<APPBARDATA>() };
 
-			if (SHAppBarMessage(
+			var result = SHAppBarMessage(
+				ABM_GETSTATE,
+				ref data);
+			return (result == (uint)ABS.ABS_AUTOHIDE);
+		}
+
+		/// <summary>
+		/// Attempts to get the information on primary taskbar.
+		/// </summary>
+		/// <param name="taskbarRect">Primary taskbar rectange</param>
+		/// <param name="taskbarAlignment">Primary taskbar alignment</param>
+		/// <param name="isShown">Whether primary taskbar is shown or hidden</param>
+		/// <returns>True if successfully gets</returns>
+		internal static bool TryGetTaskbar(out Rect taskbarRect, out TaskbarAlignment taskbarAlignment, out bool isShown)
+		{
+			var data = new APPBARDATA { cbSize = (uint)Marshal.SizeOf<APPBARDATA>() };
+
+			var result = SHAppBarMessage(
 				ABM_GETTASKBARPOS,
-				ref data))
+				ref data);
+			if (Convert.ToBoolean(result))
 			{
 				taskbarRect = data.rc;
 				taskbarAlignment = ConvertToTaskbarAlignment(data.uEdge);
-				return true;
+
+				if (TryGetWindow(PrimaryTaskbarWindowClassName, out _, out Rect rect))
+				{
+					// SHAppBarMessage function returns primary taskbar rectangle as if the taskbar
+					// is fully shown even when it is actually hidden. In contrast, GetWindowRect
+					// function returns actual, current primary taskbar rectangle. Thus, if those
+					// rectangles do not match, the taskbar is hidden in full or part.
+					isShown = (taskbarRect == rect);
+					return true;
+				}
 			}
 			taskbarRect = Rect.Empty;
 			taskbarAlignment = default;
+			isShown = default;
 			return false;
 
 			static TaskbarAlignment ConvertToTaskbarAlignment(ABE value)
@@ -442,14 +583,37 @@ namespace ScreenFrame
 		private const string PrimaryTaskbarWindowClassName = "Shell_TrayWnd";
 		private const string SecondaryTaskbarWindowClassName = "Shell_SecondaryTrayWnd";
 
-		public static bool TryGetPrimaryTaskbar(out Rect taskbarRect, out TaskbarAlignment taskbarAlignment)
+		private static bool TryGetWindow(string className, out IntPtr windowHandle, out Rect windowRect)
 		{
-			var taskbarHandle = FindWindowEx(
+			windowHandle = FindWindowEx(
 				IntPtr.Zero,
 				IntPtr.Zero,
-				PrimaryTaskbarWindowClassName,
+				className,
 				string.Empty);
-			if (taskbarHandle != IntPtr.Zero)
+			if (windowHandle != IntPtr.Zero)
+			{
+				if (GetWindowRect(
+					windowHandle,
+					out RECT rect))
+				{
+					windowRect = rect;
+					return true;
+				}
+			}
+			windowRect = default;
+			return false;
+		}
+
+		/// <summary>
+		/// Attempts to get the information on primary taskbar.
+		/// </summary>
+		/// <param name="taskbarRect">Primary taskbar rectangle</param>
+		/// <param name="taskbarAlignment">Primary taskbar alignment</param>
+		/// <returns>True if successfully gets</returns>
+		/// <remarks>If primary taskbar is hidden, this method will fail.</remarks>
+		internal static bool TryGetPrimaryTaskbar(out Rect taskbarRect, out TaskbarAlignment taskbarAlignment)
+		{
+			if (TryGetWindow(PrimaryTaskbarWindowClassName, out IntPtr taskbarHandle, out Rect rect))
 			{
 				var monitorHandle = MonitorFromWindow(
 					taskbarHandle,
@@ -462,12 +626,16 @@ namespace ScreenFrame
 						monitorHandle,
 						ref monitorInfo))
 					{
-						if (GetWindowRect(
-							taskbarHandle,
-							out RECT rect))
+						// If monitor rectangle intersects with primary taskbar rectangle but
+						// does not contain it, the taskbar is hidden in full or part and
+						// the monitor to which the taskbar belongs cannot necessarily be
+						// determined. It might not be primary monitor because primary taskbar
+						// can be placed in monitors other than primary monitor.
+						Rect monitorRect = monitorInfo.rcMonitor;
+						if (monitorRect.Contains(rect))
 						{
 							taskbarRect = rect;
-							taskbarAlignment = GetTaskbarAlignment(monitorInfo.rcMonitor, taskbarRect);
+							taskbarAlignment = GetTaskbarAlignment(monitorRect, taskbarRect);
 							return true;
 						}
 					}
@@ -478,7 +646,15 @@ namespace ScreenFrame
 			return false;
 		}
 
-		public static bool TryGetSecondaryTaskbar(Rect monitorRect, out Rect taskbarRect, out TaskbarAlignment taskbarAlignment) =>
+		/// <summary>
+		/// Attempts to get the information on secondary taskbar inside a specified monitor rectangle.
+		/// </summary>
+		/// <param name="monitorRect">Monitor rectangle</param>
+		/// <param name="taskbarRect">Secondary taskbar rectangle</param>
+		/// <param name="taskbarAlignment">Secondary taskbar alignment</param>
+		/// <returns>True if successfully gets</returns>
+		/// <remarks>If secondary taskbar is hidden, this method will fail.</remarks>
+		internal static bool TryGetSecondaryTaskbar(Rect monitorRect, out Rect taskbarRect, out TaskbarAlignment taskbarAlignment) =>
 			TryGetTaskbar(SecondaryTaskbarWindowClassName, monitorRect, out taskbarRect, out taskbarAlignment);
 
 		private static bool TryGetTaskbar(string className, Rect monitorRect, out Rect taskbarRect, out TaskbarAlignment taskbarAlignment)
@@ -515,7 +691,11 @@ namespace ScreenFrame
 							windowHandle,
 							out RECT rect))
 						{
-							if (monitorRect.IntersectsWith(rect))
+							// If monitor rectangle intersects with taskbar rectangle but
+							// does not contain it, the taskbar is hidden in full or part and
+							// the monitor to which the taskbar belongs cannot necessarily be
+							// determined.
+							if (monitorRect.Contains(rect))
 							{
 								matchRect = rect;
 								return false;
@@ -542,7 +722,7 @@ namespace ScreenFrame
 			};
 		}
 
-		public static bool TryGetOverflowAreaRect(out Rect overflowAreaRect)
+		internal static bool TryGetOverflowAreaRect(out Rect overflowAreaRect)
 		{
 			// This combination of functions will not produce current location of overflow area
 			// until it is shown in the monitor where primary taskbar currently locates. Thus

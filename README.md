@@ -10,23 +10,32 @@ The user can change the brightness of monitors, including external ones, either 
 ![Screenshot](Images/Screenshot_unison.png)<br>
 (DPI: 100%)
 
-In addition, the user can change the adjustable range of brightness for each monitor seamlessly.
+In addition, the user can change the adjustable range of brightness and contrast for each monitor seamlessly.
 
 ![Screenshot](Images/Screenshot_range.png)<br>
-(DPI: 100%)
+
+![Screenshot](Images/Screenshot_contrast.png)<br>
 
 Additional languages:
 
+- ar (Arabic) by @MohammadShughri
+- de (German) by @uDEV2019
+- es (Spanish) by @josemirm
+- fr (French) by @AlexZeGamer
+- it (Italian) by @GhostyJade
 - ja-JP (Japanese) by @emoacht
 - ko-KR (Korean) by @VenusGirl
-- pl-PL (Polish) by @Daxxxis
+- nl-NL (Dutch) by @JordyEGNL
+- pl-PL (Polish) by @Daxxxis and @FakeMichau
 - ru-RU (Russian) by @SigmaTel71
-- zh-Hans (Simplified Chinese) by @ComMouse
+- tr-TR (Turkish) by @webbudesign
+- zh-Hans (Simplified Chinese) by @ComMouse and @zhujunsan
+- zh-Hant (Traditional Chinese) by @toto6038
 
 ## Requirements
 
  * Windows 7 or newer
- * .NET Framework __4.7.2__
+ * .NET Framework __4.8__
  * An external monitor must be DDC/CI enabled.
 ![OSD](Images/Dell_ddcci.jpg)
 
@@ -36,7 +45,7 @@ Additional languages:
 [Monitorian](https://www.microsoft.com/store/apps/9nw33j738bl0) (Microsoft Store)
 
  * Other:<br>
-:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/2.16.0-Installer/MonitorianInstaller2160.zip)
+:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/3.6.5-Installer/MonitorianInstaller365.zip)
 
 ## Install/Uninstall
 
@@ -53,7 +62,8 @@ In such case, please note the following:
 
 ## Remarks
 
- - The monitor name shown in main window can be changed for easier identification of monitors. To change the name, press and hold it until it turns to be editable.
+ - The monitor name shown in main window can be changed to distinguish monitors easily. To change the name, press and hold it until it turns to be editable.
+ - To adjust the brightness by a touchpad, place two fingers on it and swipe horizontally. The touchpad must be a precision touchpad.
  - The number of monitors shown at a time is up to 4.
 
 ## Add-on Features
@@ -87,7 +97,7 @@ The code for add-on features is not included in this repository.
 
 ## Development
 
-This app is a WPF app developed and tested with Surface Pro 4.
+This app is a WPF app developed and tested with Surface Pro 4 and 7.
 
 ### Reporting
 
@@ -108,6 +118,10 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 
  - As part of testing, you can record operations to scan monitors and reflect their states. To enable the recording, check `Make operation log` in the hidden menu. After that, __operation.log__ can be copied by `Copy operation log`.
 
+### Command-line arguments
+
+- As part of testing, you can store persistent arguments in `Command-line arguments` in the hidden menu. They will be tested along with current arguments when this app starts.
+
 ### Exceptions
 
  - If anything unexpected happens, __exception.log__ will be saved. It will be useful source of information when looking into an issue.
@@ -117,10 +131,10 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 1. [Install Visual Studio](https://docs.microsoft.com/en-us/visualstudio/install/install-visual-studio).
 2. In Visual Studio Installer, go to the **Individual components** tab and make sure the following components are checked and installed. The version must match the corresponding field of project (.csproj) file of each project.
 
-| Components                                                      | Fields                 |
-|-----------------------------------------------------------------|------------------------|
-| .NET Framework 4.7.2 SDK<br>.NET Framework 4.7.2 targeting pack | TargetFrameworkVersion |
-| Windows 10 SDK (10.0.19041.0)                                   | TargetPlatformVersion  |
+| Components                                                  | Fields                 |
+|-------------------------------------------------------------|------------------------|
+| .NET Framework 4.8 SDK<br>.NET Framework 4.8 targeting pack | TargetFrameworkVersion |
+| Windows 10 SDK (10.0.19041.0)                               | TargetPlatformVersion  |
 
 3. Load the solution by specifying `/Source/Monitorian.sln`. Then go to the solution explorer and right click the solution name and execute `Restore NuGet Packages`.
 4. To open installer project, install [WiX Toolset Build Tools](https://wixtoolset.org/releases/) and [WiX Toolset Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=WixToolset.WiXToolset)
@@ -132,9 +146,53 @@ An alternative language can be shown by adding a Resources (.resx) file into `/S
  - The file name must be in `Resources.[language-culture].resx` format.
  - The name of a name/value pair must correspond to that in the default `Resources.resx` file to override it.
 
-`Resources.ja-JP.resx` (for Japanese) would be a good example for this purpose.
-
 ## History
+
+Ver 3.6 2021-9-30
+
+- Add it (Italian) language. Thanks to @GhostyJade!
+- Fix count for scan process
+
+Ver 3.5 2021-9-9
+
+- Make rounded corners default on Windows 11
+- Add zh-Hant (Traditional Chinese) language. Thanks to @toto6038!
+
+Ver 3.4 2021-8-30
+
+- Add nl-NL (Dutch) language. Thanks to @JordyEGNL!
+- Supplement zh-Hans (Simplified Chinese) language. Thanks to @zhujunsan!
+
+Ver 3.3 2021-8-20
+
+- Add ar (Arabic) language. Thanks to @MohammadShughri!
+
+Ver 3.2 2021-8-9
+
+- Supplement de (German) language. Thanks to @uDEV2019!
+
+Ver 3.1 2021-8-4
+
+- Supplement pl-PL (Polish) language. Thanks to @FakeMichau!
+- Add tr-TR (Turkish) language. Thanks to @webbudesign!
+- Supplement ru-RU (Russian) language. Thanks to @SigmaTel71!
+- Add es (Spanish) language. Thanks to @josemirm!
+
+Ver 3.0 2021-7-1
+
+- Change UI
+
+Ver 2.19 2021-6-16
+
+- Enable to adjust brightness by precision touchpad
+
+Ver 2.18 2021-5-23
+
+- Add de (German) language. Thanks to @uDEV2019!
+
+Ver 2.17 2021-5-19
+
+- Add fr (French) language. Thanks to @AlexZeGamer!
 
 Ver 2.16 2021-4-11
 

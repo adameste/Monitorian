@@ -28,6 +28,11 @@ namespace ScreenFrame
 			string lpszWindow);
 
 		[DllImport("User32.dll")]
+		private static extern IntPtr MonitorFromPoint(
+			POINT pt,
+			MONITOR_DEFAULTTO dwFlags);
+
+		[DllImport("User32.dll")]
 		private static extern IntPtr MonitorFromWindow(
 			IntPtr hwnd,
 			MONITOR_DEFAULTTO dwFlags);
@@ -131,6 +136,23 @@ namespace ScreenFrame
 		}
 
 		/// <summary>
+		/// Gets Per-Monitor DPI of the monitor to which a specified point belongs.
+		/// </summary>
+		/// <param name="point">Point</param>
+		/// <returns>DPI information</returns>
+		public static DpiScale GetDpi(Point point)
+		{
+			if (!OsVersion.Is8Point1OrGreater)
+				return SystemDpi;
+
+			var monitorHandle = MonitorFromPoint(
+				point,
+				MONITOR_DEFAULTTO.MONITOR_DEFAULTTOPRIMARY);
+
+			return GetDpi(monitorHandle);
+		}
+
+		/// <summary>
 		/// Gets Per-Monitor DPI of the monitor to which a specified Visual belongs.
 		/// </summary>
 		/// <param name="visual">Visual</param>
@@ -140,10 +162,10 @@ namespace ScreenFrame
 			if (visual is null)
 				throw new ArgumentNullException(nameof(visual));
 
-			if (!OsVersion.Is81OrNewer)
+			if (!OsVersion.Is8Point1OrGreater)
 				return SystemDpi;
 
-			if (OsVersion.Is10Redstone1OrNewer)
+			if (OsVersion.Is10Build14393OrGreater)
 				return VisualTreeHelper.GetDpi(visual);
 
 			var source = PresentationSource.FromVisual(visual) as HwndSource;
@@ -159,7 +181,7 @@ namespace ScreenFrame
 		/// <returns>DPI information</returns>
 		public static DpiScale GetNotificationAreaDpi()
 		{
-			if (!OsVersion.Is81OrNewer)
+			if (!OsVersion.Is8Point1OrGreater)
 				return SystemDpi;
 
 			var taskbarHandle = FindWindowEx(

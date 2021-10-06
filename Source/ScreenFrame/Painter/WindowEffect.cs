@@ -10,11 +10,11 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-using Monitorian.Core.Helper;
+using ScreenFrame.Helper;
 
-namespace Monitorian.Core.Views
+namespace ScreenFrame.Painter
 {
-	public static class WindowEffect
+	internal static class WindowEffect
 	{
 		#region Win32 (common)
 
@@ -23,6 +23,13 @@ namespace Monitorian.Core.Views
 			IntPtr hwnd,
 			uint dwAttribute,
 			[In] ref bool pvAttribute, // IntPtr
+			uint cbAttribute);
+
+		[DllImport("Dwmapi.dll", SetLastError = true)]
+		private static extern int DwmSetWindowAttribute(
+			IntPtr hwnd,
+			uint dwAttribute,
+			[In] ref uint pvAttribute, // IntPtr
 			uint cbAttribute);
 
 		private enum DWMWA : uint
@@ -42,7 +49,27 @@ namespace Monitorian.Core.Views
 			DWMWA_CLOAK,                       // [set] Cloak or uncloak the window
 			DWMWA_CLOAKED,                     // [get] Gets the cloaked state of the window
 			DWMWA_FREEZE_REPRESENTATION,       // [set] Force this window to freeze the thumbnail without live update
+
+			// Derived from dwmapi.h included in Windows Insider Preview SDK
+			DWMWA_PASSIVE_UPDATE_MODE,            // [set] BOOL, Updates the window only when desktop composition runs for other reasons
+			DWMWA_USE_HOSTBACKDROPBRUSH,          // [set] BOOL, Allows the use of host backdrop brushes for the window.
+			DWMWA_USE_IMMERSIVE_DARK_MODE = 20,   // [set] BOOL, Allows a window to either use the accent color, or dark, according to the user Color Mode preferences.
+			DWMWA_WINDOW_CORNER_PREFERENCE = 33,  // [set] WINDOW_CORNER_PREFERENCE, Controls the policy that rounds top-level window corners
+			DWMWA_BORDER_COLOR,                   // [set] COLORREF, The color of the thin border around a top-level window
+			DWMWA_CAPTION_COLOR,                  // [set] COLORREF, The color of the caption
+			DWMWA_TEXT_COLOR,                     // [set] COLORREF, The color of the caption text
+			DWMWA_VISIBLE_FRAME_BORDER_THICKNESS, // [get] UINT, width of the visible border around a thick frame window
+
 			DWMWA_LAST
+		}
+
+		// Derived from dwmapi.h included in Windows Insider Preview SDK
+		private enum DWMWCP : uint
+		{
+			DWMWCP_DEFAULT = 0,
+			DWMWCP_DONOTROUND = 1,
+			DWMWCP_ROUND = 2,
+			DWMWCP_ROUNDSMALL = 3
 		}
 
 		private const int S_OK = 0x0;
@@ -87,7 +114,7 @@ namespace Monitorian.Core.Views
 		{
 			public AccentState AccentState;
 			public int AccentFlags;
-			public int GradientColor;
+			public uint GradientColor;
 			public int AnimationId;
 		}
 
@@ -137,89 +164,6 @@ namespace Monitorian.Core.Views
 
 		#endregion
 
-		/// <summary>
-		/// Color changeable elements of window
-		/// </summary>
-		private enum ColorElement
-		{
-			None = 0,
-			MainBorder,
-			MainBackground,
-			MenuBorder,
-			MenuBackground
-		}
-
-		private static IReadOnlyDictionary<string, ColorElement> ColorPairs => new Dictionary<string, ColorElement>
-		{
-			{ "/main_border", ColorElement.MainBorder },
-			{ "/main_background", ColorElement.MainBackground },
-			{ "/menu_border", ColorElement.MenuBorder },
-			{ "/menu_background", ColorElement.MenuBackground }
-		};
-
-		public static IReadOnlyCollection<string> Options => ColorPairs.Keys.ToArray();
-
-		private static readonly Lazy<Dictionary<ColorElement, Brush>> _colors = new Lazy<Dictionary<ColorElement, Brush>>(() =>
-		{
-			var converter = new BrushConverter();
-			bool TryParse(string source, out Brush brush)
-			{
-				try
-				{
-					brush = (Brush)converter.ConvertFromString(source);
-					return true;
-				}
-				catch
-				{
-					brush = null;
-					return false;
-				}
-			}
-
-			var colorPairs = ColorPairs;
-			var colors = new Dictionary<ColorElement, Brush>();
-			var arguments = AppKeeper.DefinedArguments;
-
-			int i = 0;
-			while (i < arguments.Count - 1)
-			{
-				if (colorPairs.TryGetValue(arguments[i], out ColorElement key) && TryParse(arguments[i + 1], out Brush value))
-				{
-					colors[key] = value;
-					i++;
-				}
-				i++;
-			}
-			return colors.Any() ? colors : null;
-		});
-
-		private static bool ChangeColors(Window window)
-		{
-			if (_colors.Value is null)
-				return false;
-
-			var isBackgroundChanged = false;
-
-			foreach (var (key, value) in _colors.Value)
-			{
-				switch (key, window is MainWindow)
-				{
-					case (ColorElement.MainBorder, true):
-					case (ColorElement.MenuBorder, false):
-						window.BorderBrush = value;
-						window.BorderThickness = new Thickness(1);
-						break;
-
-					case (ColorElement.MainBackground, true):
-					case (ColorElement.MenuBackground, false):
-						window.Background = value;
-						isBackgroundChanged = true;
-						break;
-				}
-			}
-			return isBackgroundChanged;
-		}
-
 		public static bool DisableTransitions(Window window)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
@@ -232,59 +176,43 @@ namespace Monitorian.Core.Views
 				(uint)Marshal.SizeOf<bool>()) == S_OK);
 		}
 
-		public static bool EnableBackgroundTranslucency(Window window)
-		{
-			if (ChangeColors(window))
-				return false;
-
-			if (OsVersion.Is10Threshold1OrNewer)
-			{
-				// For Windows 10
-				if (!IsTransparencyEnabledForWin10.Value)
-					return false;
-
-				ChangeBackgroundTranslucent(window);
-
-				return EnableBackgroundBlurForWin10(window);
-			}
-
-			if (OsVersion.Is8OrNewer)
-			{
-				// For Windows 8 and 8.1, no blur effect is available.
-				return false;
-			}
-
-			if (OsVersion.IsVistaOrNewer)
-			{
-				// For Windows 7
-				if (!IsTransparencyEnabledForWin7.Value)
-					return false;
-
-				ChangeBackgroundTranslucent(window);
-
-				return EnableBackgroundBlurForWin7(window);
-			}
-
-			return false;
-		}
-
-		private static readonly Lazy<bool> IsTransparencyEnabledForWin10 = new Lazy<bool>(() => IsEnableTransparencyOn());
-		private static readonly Lazy<bool> IsTransparencyEnabledForWin7 = new Lazy<bool>(() => IsColorizationOpaqueBlendOn());
-
-		private const string TranslucentBrushKey = "App.Background.Translucent";
-		private static SolidColorBrush TranslucentBrush;
-
-		private static void ChangeBackgroundTranslucent(Window window)
-		{
-			TranslucentBrush ??= (SolidColorBrush)window.FindResource(TranslucentBrushKey);
-			window.Background = TranslucentBrush;
-		}
-
-		private static bool EnableBackgroundBlurForWin10(Window window)
+		public static bool SetCornersForWin11(Window window, CornerPreference corner)
 		{
 			var windowHandle = new WindowInteropHelper(window).Handle;
 
-			var accent = new AccentPolicy { AccentState = AccentState.ACCENT_ENABLE_BLURBEHIND };
+			uint value;
+			switch (corner)
+			{
+				case CornerPreference.NotRound:
+					value = (uint)DWMWCP.DWMWCP_DONOTROUND;
+					break;
+				case CornerPreference.Round:
+					value = (uint)DWMWCP.DWMWCP_ROUND;
+					break;
+				default:
+					return false;
+			}
+
+			return (DwmSetWindowAttribute(
+				windowHandle,
+				(uint)DWMWA.DWMWA_WINDOW_CORNER_PREFERENCE,
+				ref value,
+				(uint)Marshal.SizeOf(value)) == S_OK);
+		}
+
+		public static bool EnableBackgroundBlurForWin10(Window window, Color? color = null)
+		{
+			var windowHandle = new WindowInteropHelper(window).Handle;
+
+			var accent = (color is null)
+				? new AccentPolicy { AccentState = AccentState.ACCENT_ENABLE_BLURBEHIND }
+				: new AccentPolicy
+				{
+					AccentState = AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND,
+					AccentFlags = 2,
+					GradientColor = color.Value.ToUInt32() // If 0, blur effect will not be added.
+				};
+
 			var accentSize = Marshal.SizeOf(accent);
 
 			var accentPointer = IntPtr.Zero;
@@ -297,7 +225,7 @@ namespace Monitorian.Core.Views
 				{
 					Attribute = WindowCompositionAttribute.WCA_ACCENT_POLICY,
 					Data = accentPointer,
-					SizeOfData = accentSize,
+					SizeOfData = accentSize
 				};
 
 				return SetWindowCompositionAttribute(
@@ -316,7 +244,7 @@ namespace Monitorian.Core.Views
 			}
 		}
 
-		private static bool EnableBackgroundBlurForWin7(Window window)
+		public static bool EnableBackgroundBlurForWin7(Window window)
 		{
 			if ((DwmIsCompositionEnabled(out bool isEnabled) != S_OK) || !isEnabled)
 				return false;
@@ -335,7 +263,11 @@ namespace Monitorian.Core.Views
 				ref bb) == S_OK);
 		}
 
-		#region Registry
+		public static bool IsTransparencyEnabledForWin10 => _isTransparencyEnabledForWin10.Value;
+		private static readonly Lazy<bool> _isTransparencyEnabledForWin10 = new(() => IsEnableTransparencyOn());
+
+		public static bool IsTransparencyEnabledForWin7 => _isTransparencyEnabledForWin7.Value;
+		private static readonly Lazy<bool> _isTransparencyEnabledForWin7 = new(() => IsColorizationOpaqueBlendOn());
 
 		private static bool IsEnableTransparencyOn()
 		{
@@ -366,7 +298,26 @@ namespace Monitorian.Core.Views
 				_ => false
 			};
 		}
+	}
 
-		#endregion
+	/// <summary>
+	/// Corner preferences of window
+	/// </summary>
+	public enum CornerPreference
+	{
+		/// <summary>
+		/// None
+		/// </summary>
+		None = 0,
+
+		/// <summary>
+		/// Not round
+		/// </summary>
+		NotRound,
+
+		/// <summary>
+		/// Round
+		/// </summary>
+		Round
 	}
 }

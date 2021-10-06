@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 using Monitorian.Core.Helper;
 using Monitorian.Core.Models;
@@ -14,6 +15,8 @@ namespace Monitorian.Core.ViewModels
 	public class MonitorViewModel : ViewModelBase
 	{
 		private readonly AppControllerCore _controller;
+		public SettingsCore Settings => _controller.Settings;
+
 		private IMonitor _monitor;
 
 		public MonitorViewModel(AppControllerCore controller, IMonitor monitor)
@@ -46,6 +49,7 @@ namespace Monitorian.Core.ViewModels
 		public string Description => _monitor.Description;
 		public byte DisplayIndex => _monitor.DisplayIndex;
 		public byte MonitorIndex => _monitor.MonitorIndex;
+		public Rect MonitorRect => _monitor.MonitorRect;
 		public double MonitorTop => _monitor.MonitorRect.Top;
 
 		#region Customization
@@ -78,6 +82,16 @@ namespace Monitorian.Core.ViewModels
 		private bool _isUnison;
 
 		/// <summary>
+		/// Whether the range of brightness is changing
+		/// </summary>
+		public bool IsRangeChanging
+		{
+			get => _isRangeChanging;
+			set => SetPropertyValue(ref _isRangeChanging, value);
+		}
+		private bool _isRangeChanging = false;
+
+		/// <summary>
 		/// Lowest brightness in the range of brightness
 		/// </summary>
 		public int RangeLowest
@@ -106,16 +120,6 @@ namespace Monitorian.Core.ViewModels
 		private byte _rangeHighest = 100;
 
 		private double GetRangeRate() => Math.Abs(RangeHighest - RangeLowest) / 100D;
-
-		/// <summary>
-		/// Whether the range of brightness is changing
-		/// </summary>
-		public bool IsRangeChanging
-		{
-			get => _isRangeChanging;
-			set => SetPropertyValue(ref _isRangeChanging, value);
-		}
-		private bool _isRangeChanging = false;
 
 		#endregion
 
@@ -187,12 +191,7 @@ namespace Monitorian.Core.ViewModels
 			var count = Math.Floor((Brightness - RangeLowest) / size);
 			int brightness = RangeLowest + (int)Math.Ceiling((count + 1) * size);
 
-			if (brightness < RangeLowest)
-				brightness = RangeLowest;
-			else if (RangeHighest < brightness)
-				brightness = isCycle ? RangeLowest : RangeHighest;
-
-			SetBrightness(brightness);
+			SetBrightness(brightness, isCycle);
 		}
 
 		public void DecrementBrightness()
@@ -212,10 +211,15 @@ namespace Monitorian.Core.ViewModels
 			var count = Math.Ceiling((Brightness - RangeLowest) / size);
 			int brightness = RangeLowest + (int)Math.Floor((count - 1) * size);
 
+			SetBrightness(brightness, isCycle);
+		}
+
+		private void SetBrightness(int brightness, bool isCycle)
+		{
 			if (brightness < RangeLowest)
 				brightness = isCycle ? RangeHighest : RangeLowest;
 			else if (RangeHighest < brightness)
-				brightness = RangeHighest;
+				brightness = isCycle ? RangeLowest : RangeHighest;
 
 			SetBrightness(brightness);
 		}
@@ -241,6 +245,99 @@ namespace Monitorian.Core.ViewModels
 					switch (result.Status)
 					{
 						case AccessStatus.DdcFailed:
+						case AccessStatus.TransmissionFailed:
+						case AccessStatus.NoLongerExist:
+							_controller.OnMonitorsChangeFound();
+							break;
+					}
+					OnFailed();
+					return false;
+			}
+		}
+
+		#endregion
+
+		#region Contrast
+
+		public bool IsContrastSupported => _monitor.IsContrastSupported;
+
+		public bool IsContrastChanging
+		{
+			get => IsContrastSupported && _isContrastChanging;
+			set
+			{
+				if (SetPropertyValue(ref _isContrastChanging, value) && value)
+					UpdateContrast();
+			}
+		}
+		private bool _isContrastChanging = false;
+
+		public int Contrast
+		{
+			get => _monitor.Contrast;
+			set
+			{
+				if (_monitor.Contrast == value)
+					return;
+
+				SetContrast(value);
+
+				if (IsSelected)
+					_controller.SaveMonitorUserChanged(this);
+			}
+		}
+
+		public bool UpdateContrast()
+		{
+			AccessResult result;
+			lock (_lock)
+			{
+				result = _monitor.UpdateContrast();
+			}
+
+			switch (result.Status)
+			{
+				case AccessStatus.Succeeded:
+					RaisePropertyChanged(nameof(Contrast));
+					OnSucceeded();
+					return true;
+
+				default:
+					_controller.OnMonitorAccessFailed(result);
+
+					switch (result.Status)
+					{
+						case AccessStatus.NoLongerExist:
+							_controller.OnMonitorsChangeFound();
+							break;
+					}
+					OnFailed();
+					return false;
+			}
+		}
+
+		private bool SetContrast(int contrast)
+		{
+			AccessResult result;
+			lock (_lock)
+			{
+				result = _monitor.SetContrast(contrast);
+			}
+
+			switch (result.Status)
+			{
+				case AccessStatus.Succeeded:
+					RaisePropertyChanged(nameof(Contrast));
+					OnSucceeded();
+					return true;
+
+				default:
+					_controller.OnMonitorAccessFailed(result);
+
+					switch (result.Status)
+					{
+						case AccessStatus.DdcFailed:
+						case AccessStatus.TransmissionFailed:
 						case AccessStatus.NoLongerExist:
 							_controller.OnMonitorsChangeFound();
 							break;
@@ -275,6 +372,18 @@ namespace Monitorian.Core.ViewModels
 		//   to the normal count when the monitor succeeds again.
 		// - The initial count must be smaller than the normal count so that _isConfirmed field
 		//   will be set at the first success while reducing unnecessary access to the field.
+		// - If an unreachable monitor is found and added to monitors collection and if there is no
+		//   controllable monitor, the unreachable monitor will be made to target (IsTarget
+		//   property will be true) to make it appear in view. In such case, the initial value of
+		//   IsControllable property will be false because IsReachable property is false while
+		//   Message property remains null until this count decreases to 0. Since IsReachable
+		//   property is false, scan process will not change this count but update process will do.
+		//   If such monitor is turned to be reachable and succeeds, this count will be normal count
+		//   and IsControllable property will be true. To notify this change to view, this count
+		//   (copied to former count) will have to pass value check inside OnSucceeded method.
+		//   If a monitor is first found unreachable but immediately turned to be reachable before
+		//   this count decreases, this count will remain as initial count. For this reason,
+		//   the value to be compared with this count must not be smaller than initial count.
 		private short _controllableCount = InitialCount;
 		private const short InitialCount = 3;
 		private const short NormalCount = 5;
@@ -285,7 +394,7 @@ namespace Monitorian.Core.ViewModels
 			{
 				var formerCount = _controllableCount;
 				_controllableCount = NormalCount;
-				if (formerCount <= 0)
+				if (formerCount <= InitialCount)
 				{
 					RaisePropertyChanged(nameof(IsControllable));
 					RaisePropertyChanged(nameof(Message));

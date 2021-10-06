@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using Microsoft.Win32;
 using Windows.UI.ViewManagement;
 
 namespace Monitorian.Supplement
@@ -38,25 +37,14 @@ namespace Monitorian.Supplement
 			return Color.FromArgb(value.A, value.R, value.G, value.B);
 		}
 
-		/// <summary>
-		/// Determines whether light theme is used by the system.
-		/// </summary>
-		/// <returns>True if light theme is used</returns>
-		public static bool IsLightThemeUsed()
-		{
-			const string keyName = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"; // HKCU
-			const string valueName = "SystemUsesLightTheme";
-
-			using var key = Registry.CurrentUser.OpenSubKey(keyName);
-
-			return (key?.GetValue(valueName) is 1);
-		}
-
-		private static readonly object _lock = new object();
+		private static readonly object _lock = new();
 
 		/// <summary>
 		/// Occurs when colors have changed.
 		/// </summary>
+		/// <remarks>
+		/// UISettings.ColorValuesChanged event seems not to fire when this assembly is packaged.
+		/// </remarks>
 		public static event EventHandler ColorsChanged
 		{
 			add

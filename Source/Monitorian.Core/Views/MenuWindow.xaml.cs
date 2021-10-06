@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -14,6 +15,8 @@ using System.Windows.Media.Imaging;
 
 using Monitorian.Core.Models;
 using Monitorian.Core.ViewModels;
+using Monitorian.Core.Views.Controls;
+using ScreenFrame;
 using ScreenFrame.Movers;
 
 namespace Monitorian.Core.Views
@@ -34,29 +37,47 @@ namespace Monitorian.Core.Views
 			_mover = new FloatWindowMover(this, pivot);
 			_mover.AppDeactivated += OnCloseTriggered;
 			_mover.EscapeKeyDown += OnCloseTriggered;
+
+			controller.WindowPainter.Add(this);
 		}
 
-		protected override void OnSourceInitialized(EventArgs e)
+		public UIElementCollection HeadSection => this.HeadItems.Children;
+		public UIElementCollection MenuSectionTop => this.MenuItemsTop.Children;
+		public UIElementCollection MenuSectionMiddle => this.MenuItemsMiddle.Children;
+
+		public override void OnApplyTemplate()
 		{
-			base.OnSourceInitialized(e);
+			base.OnApplyTemplate();
 
-			WindowEffect.EnableBackgroundTranslucency(this);
+			EnsureFlowDirection(this);
 		}
 
-		public void AddHeadItem(Control item) => this.HeadItems.Children.Add(item);
-		public void RemoveHeadItem(Control item) => this.HeadItems.Children.Remove(item);
+		public static void EnsureFlowDirection(ContentControl rootControl)
+		{
+			if (!LanguageService.IsResourceRightToLeft)
+				return;
 
-		public void AddMenuItem(Control item) => this.MenuItems.Children.Insert(0, item);
-		public void RemoveMenuItem(Control item) => this.MenuItems.Children.Remove(item);
+			var resourceValues = new HashSet<string>(LanguageService.ResourceDictionary.Values);
+
+			foreach (var itemControl in LogicalTreeHelperAddition.EnumerateDescendants<ContentControl>(rootControl)
+				.Select(x => x.Content as ButtonBase)
+				.Where(x => x is not null))
+			{
+				TemplateElement.SetVisibility(itemControl, Visibility.Visible);
+
+				if (resourceValues.Contains(itemControl.Content))
+					itemControl.FlowDirection = FlowDirection.RightToLeft;
+			}
+		}
 
 		#region Show/Close
 
-		public void DepartFromForegrond()
+		public void DepartFromForeground()
 		{
 			this.Topmost = false;
 		}
 
-		public async void ReturnToForegroud()
+		public async void ReturnToForeground()
 		{
 			// Wait for this window to be able to be activated.
 			await Task.Delay(TimeSpan.FromMilliseconds(100));
