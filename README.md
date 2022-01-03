@@ -12,25 +12,25 @@ The user can change the brightness of monitors, including external ones, either 
 
 In addition, the user can change the adjustable range of brightness and contrast for each monitor seamlessly.
 
-![Screenshot](Images/Screenshot_range.png)<br>
-
+![Screenshot](Images/Screenshot_range.png)&nbsp;
 ![Screenshot](Images/Screenshot_contrast.png)<br>
 
 Additional languages:
 
-- ar (Arabic) by @MohammadShughri
-- de (German) by @uDEV2019
-- es (Spanish) by @josemirm
-- fr (French) by @AlexZeGamer
-- it (Italian) by @GhostyJade
-- ja-JP (Japanese) by @emoacht
-- ko-KR (Korean) by @VenusGirl
-- nl-NL (Dutch) by @JordyEGNL
-- pl-PL (Polish) by @Daxxxis and @FakeMichau
-- ru-RU (Russian) by @SigmaTel71
-- tr-TR (Turkish) by @webbudesign
-- zh-Hans (Simplified Chinese) by @ComMouse and @zhujunsan
-- zh-Hant (Traditional Chinese) by @toto6038
+ - Arabic (ar) by @MohammadShughri
+ - German (de) by @uDEV2019
+ - Spanish (es) by @josemirm
+ - French (fr) by @AlexZeGamer
+ - Italian (it) by @GhostyJade
+ - Japanese (ja-JP) by @emoacht
+ - Korean (ko-KR) by @VenusGirl
+ - Dutch (nl-NL) by @JordyEGNL
+ - Polish (pl-PL) by @Daxxxis and @FakeMichau
+ - Romanian (ro) by @calini
+ - Russian (ru-RU) by @SigmaTel71
+ - Turkish (tr-TR) by @webbudesign
+ - Simplified Chinese (zh-Hans) by @ComMouse and @zhujunsan
+ - Traditional Chinese (zh-Hant) by @toto6038
 
 ## Requirements
 
@@ -41,11 +41,17 @@ Additional languages:
 
 ## Download
 
- * Windows 10 Anniversary Update (1607) or newer:<br>
-[Monitorian](https://www.microsoft.com/store/apps/9nw33j738bl0) (Microsoft Store)
+ * Microsoft Store (Windows 10 (1607) or newer):<br>
+   [Monitorian](https://www.microsoft.com/store/apps/9nw33j738bl0)<br>
+   <a href='//www.microsoft.com/store/apps/9nw33j738bl0?cid=storebadge&ocid=badge'><img src='https://developer.microsoft.com/store/badges/images/English_get-it-from-MS.png' alt='Monitorian' width='142px' height='52px'/></a>
+
+ * Winget (a.k.a. [Windows Package Manager](https://docs.microsoft.com/en-us/windows/package-manager), App Installer):
+   ```
+   winget install Monitorian
+   ```
 
  * Other:<br>
-:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/3.6.5-Installer/MonitorianInstaller365.zip)
+:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/3.8.2-Installer/MonitorianInstaller382.zip)
 
 ## Install/Uninstall
 
@@ -120,7 +126,7 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 
 ### Command-line arguments
 
-- As part of testing, you can store persistent arguments in `Command-line arguments` in the hidden menu. They will be tested along with current arguments when this app starts.
+ - As part of testing, you can store persistent arguments in `Command-line arguments` in the hidden menu. They will be tested along with current arguments when this app starts.
 
 ### Exceptions
 
@@ -137,7 +143,7 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 | Windows 10 SDK (10.0.19041.0)                               | TargetPlatformVersion  |
 
 3. Load the solution by specifying `/Source/Monitorian.sln`. Then go to the solution explorer and right click the solution name and execute `Restore NuGet Packages`.
-4. To open installer project, install [WiX Toolset Build Tools](https://wixtoolset.org/releases/) and [WiX Toolset Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=WixToolset.WiXToolset)
+4. To open installer project, install [WiX Toolset Build Tools](https://wixtoolset.org/releases/) and [WiX Toolset Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=WixToolset.WiXToolset). For Visual Studio 2022, Use [latest release](https://github.com/wixtoolset/VisualStudioExtension/releases/tag/v1.0.0.12).
 
 ### Globalization
 
@@ -148,104 +154,113 @@ An alternative language can be shown by adding a Resources (.resx) file into `/S
 
 ## History
 
+Ver 3.8 2021-12-18
+
+ - Add Romanian (ro) language. Thanks to @calini!
+
+Ver 3.7 2021-12-3
+
+ - Fix issue of combination of moving in unison and deferring change
+ - Modify DPI awareness of the icon
+
 Ver 3.6 2021-9-30
 
-- Add it (Italian) language. Thanks to @GhostyJade!
-- Fix count for scan process
+ - Add Italian (it) language. Thanks to @GhostyJade!
+ - Fix count for scan process
 
 Ver 3.5 2021-9-9
 
-- Make rounded corners default on Windows 11
-- Add zh-Hant (Traditional Chinese) language. Thanks to @toto6038!
+ - Make rounded corners default on Windows 11
+ - Add Traditional Chinese (zh-Hant) language. Thanks to @toto6038!
 
 Ver 3.4 2021-8-30
 
-- Add nl-NL (Dutch) language. Thanks to @JordyEGNL!
-- Supplement zh-Hans (Simplified Chinese) language. Thanks to @zhujunsan!
+ - Add Dutch (nl-NL) language. Thanks to @JordyEGNL!
+ - Supplement Simplified Chinese (zh-Hans) language. Thanks to @zhujunsan!
 
 Ver 3.3 2021-8-20
 
-- Add ar (Arabic) language. Thanks to @MohammadShughri!
+ - Add Arabic (ar) language. Thanks to @MohammadShughri!
 
 Ver 3.2 2021-8-9
 
-- Supplement de (German) language. Thanks to @uDEV2019!
+ - Supplement German (de) language. Thanks to @uDEV2019!
 
 Ver 3.1 2021-8-4
 
-- Supplement pl-PL (Polish) language. Thanks to @FakeMichau!
-- Add tr-TR (Turkish) language. Thanks to @webbudesign!
-- Supplement ru-RU (Russian) language. Thanks to @SigmaTel71!
-- Add es (Spanish) language. Thanks to @josemirm!
+ - Supplement Polish (pl-PL) language. Thanks to @FakeMichau!
+ - Add Turkish (tr-TR) language. Thanks to @webbudesign!
+ - Supplement Russian (ru-RU) language. Thanks to @SigmaTel71!
+ - Add Spanish (es) language. Thanks to @josemirm!
 
 Ver 3.0 2021-7-1
 
-- Change UI
+ - Change UI
 
 Ver 2.19 2021-6-16
 
-- Enable to adjust brightness by precision touchpad
+ - Enable to adjust brightness by precision touchpad
 
 Ver 2.18 2021-5-23
 
-- Add de (German) language. Thanks to @uDEV2019!
+ - Add German (de) language. Thanks to @uDEV2019!
 
 Ver 2.17 2021-5-19
 
-- Add fr (French) language. Thanks to @AlexZeGamer!
+ - Add French (fr) language. Thanks to @AlexZeGamer!
 
 Ver 2.16 2021-4-11
 
-- Add ko-KR (Korean) language. Thanks to @VenusGirl!
+ - Add Korean (ko-KR) language. Thanks to @VenusGirl!
 
 Ver 2.14 2021-3-26
 
-- Improve internal processes
+ - Improve internal processes
 
 Ver 2.13 2021-2-13
 
-- Improve internal process
+ - Improve internal process
 
 Ver 2.11 2021-1-26
 
-- Add ru-RU (Russian) language. Thanks to @SigmaTel71!
-- Add pl-PL (Polish) language. Thanks to @Daxxxis!
-- Add zh-Hans (Simplified Chinese) language. Thanks to @ComMouse!
+ - Add Russian (ru-RU) language. Thanks to @SigmaTel71!
+ - Add Polish (pl-PL) language. Thanks to @Daxxxis!
+ - Add Simplified Chinese (zh-Hans) language. Thanks to @ComMouse!
 
 Ver 2.9 2020-12-22
 
-- Improve codes
+ - Improve codes
 
 Ver 2.8 2020-11-23
 
-- Adjust mouse wheel roll
+ - Adjust mouse wheel roll
 
 Ver 2.7 2020-10-30
 
-- Enable to change adjustable range
-- Adjust scan process
-- Add get/set brightness test to probe
+ - Enable to change adjustable range
+ - Adjust scan process
+ - Add get/set brightness test to probe
 
 Ver 2.6 2020-8-10
 
-- Enable to defer update of brightness
+ - Enable to defer update of brightness
 
 Ver 2.5 2020-8-1
 
-- Fix issue of empty description
+ - Fix issue on empty description
 
 Ver 2.4 2019-12-30
 
-- Improve scan process
+ - Improve scan process
 
 Ver 2.3 2019-11-28
 
-- Change scan process
+ - Change scan process
 
 Ver 2.2 2019-11-18
 
-- Change setting to show adjusted brightness by ambient light enabled as default
-- Fix bugs
+ - Change setting to show adjusted brightness by ambient light enabled as default
+ - Fix bugs
 
 Ver 2.1 2019-11-6
 

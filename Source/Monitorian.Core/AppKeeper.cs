@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Threading;
 
 using Monitorian.Core.Models;
+using Monitorian.Core.Models.Monitor;
 using Monitorian.Core.Views;
 using StartupAgency;
 
@@ -25,13 +26,15 @@ namespace Monitorian.Core
 
 		public async Task<bool> StartAsync(StartupEventArgs e, params string[] definedOptions)
 		{
+			// This method must be called before DefinedArguments or OtherArguments property is consumed.
+			// An exception thrown in this method will not be handled.
+			await ParseArgumentsAsync(e, definedOptions);
 #if DEBUG
 			ConsoleService.TryStartWrite();
 #else
 			if (OtherArguments.Any())
 				ConsoleService.TryStartWrite();
 #endif
-			await ParseArgumentsAsync(e, definedOptions);
 
 			SubscribeExceptions();
 
@@ -68,6 +71,7 @@ namespace Monitorian.Core
 			new[]
 			{
 				StartupAgent.Options,
+				MonitorManager.Options,
 				LanguageService.Options,
 				WindowPainter.Options
 			}
@@ -83,7 +87,7 @@ namespace Monitorian.Core
 			// The first element of StartupEventArgs.Args is not executing assembly's path unlike
 			// that of arguments provided by Environment.GetCommandLineArgs method.
 			args = e.Args.Concat(args).ToArray();
-			if (args.Any() is not true)
+			if (args is not { Length: > 0 })
 				return;
 
 			const char optionMark = '/';
