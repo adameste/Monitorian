@@ -43,7 +43,8 @@ namespace Monitorian.Core.Views
 			_brightnessUpHook.Triggered += _brightnessUpHook_Triggered;
 			_mover = new StickWindowMover(this, controller.NotifyIconContainer.NotifyIcon);
 			_controller = controller;
-		}
+
+
 			if (OsVersion.Is11OrGreater)
 				_mover.KeepsDistance = true;
 
@@ -64,6 +65,18 @@ namespace Monitorian.Core.Views
 				var slider = FocusManager.GetFocusedElement(this) as EnhancedSlider;
 				slider?.EnsureUpdateSource();
 			};
+		}
+
+		private void _brightnessDownHook_Triggered()
+		{
+			foreach (var it in _controller.Monitors)
+				it.DecrementBrightness(10, false);
+		}
+
+		private void _brightnessUpHook_Triggered()
+		{
+			foreach (var it in _controller.Monitors)
+				it.IncrementBrightness(10, false);
 		}
 
 		public override void OnApplyTemplate()
