@@ -36,7 +36,7 @@ namespace Monitorian.Core.ViewModels
 					}
 					_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.DisplayIndex), ListSortDirection.Ascending));
 					_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.MonitorIndex), ListSortDirection.Ascending));
-					_monitorsView.Filter = x => ((MonitorViewModel)x).IsTarget;
+					_monitorsView.Filter = x => true || ((MonitorViewModel)x).IsTarget;
 					_monitorsView.IsLiveFiltering = true;
 					_monitorsView.LiveFilteringProperties.Add(nameof(MonitorViewModel.IsTarget));
 
