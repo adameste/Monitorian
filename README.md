@@ -2,7 +2,7 @@
 
 Monitorian is a Windows desktop tool to adjust the brightness of multiple monitors with ease.
 
-![Screenshot](Images/Screenshot_main.png)<br>
+<img src="Images/Screenshot_main.png" alt="Screenshot" width="487.5"><br>
 (DPI: 200%)
 
 The user can change the brightness of monitors, including external ones, either individually or in unison. For the system with an ambient light sensor, the adjusted brightness can be shown along with configured one.
@@ -15,22 +15,27 @@ In addition, the user can change the adjustable range of brightness and contrast
 ![Screenshot](Images/Screenshot_range.png)&nbsp;
 ![Screenshot](Images/Screenshot_contrast.png)<br>
 
+https://user-images.githubusercontent.com/7205690/210137118-66cfdd6e-9847-41b3-a836-d1ff8cf73f3d.mp4
+
 Additional languages:
 
  - Arabic (ar) by @MohammadShughri
+ - Catalan (ca) by @ericmp33
  - German (de) by @uDEV2019
- - Spanish (es) by @josemirm
- - French (fr) by @AlexZeGamer
+ - Spanish (es) by @josemirm and @ericmp33
+ - French (fr) by @AlexZeGamer and @Rikiiiiiii
  - Italian (it) by @GhostyJade
  - Japanese (ja-JP) by @emoacht
  - Korean (ko-KR) by @VenusGirl
  - Dutch (nl-NL) by @JordyEGNL
  - Polish (pl-PL) by @Daxxxis and @FakeMichau
+ - Portuguese (pt-BR) by @guilhermgonzaga
  - Romanian (ro) by @calini
- - Russian (ru-RU) by @SigmaTel71
+ - Russian (ru-RU) by @SigmaTel71 and @San4es
  - Turkish (tr-TR) by @webbudesign
- - Simplified Chinese (zh-Hans) by @ComMouse and @zhujunsan
- - Traditional Chinese (zh-Hant) by @toto6038
+ - Ukrainian (uk-UA) by @kaplun07
+ - Simplified Chinese (zh-Hans) by @ComMouse, @zhujunsan, @XMuli, @FISHandCHEAP and @FrzMtrsprt
+ - Traditional Chinese (zh-Hant) by @toto6038 and @XMuli
 
 ## Requirements
 
@@ -51,7 +56,7 @@ Additional languages:
    ```
 
  * Other:<br>
-:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/3.8.2-Installer/MonitorianInstaller382.zip)
+:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/4.2.2-Installer/MonitorianInstaller422.zip)
 
 ## Install/Uninstall
 
@@ -63,7 +68,7 @@ msiexec /a [source msi file path] targetdir=[destination folder path (absolute p
 
 In such case, please note the following:
 
- - The settings file will be created at: `[system drive]\Users\[user name]\AppData\Local\Monitorian\`
+ - The settings file (and other file) will be created at: `[system drive]\Users\[user name]\AppData\Local\Monitorian\`
  - When you check [Start on sign in], a registry value will be added to: `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`
 
 ## Remarks
@@ -71,6 +76,7 @@ In such case, please note the following:
  - The monitor name shown in main window can be changed to distinguish monitors easily. To change the name, press and hold it until it turns to be editable.
  - To adjust the brightness by a touchpad, place two fingers on it and swipe horizontally. The touchpad must be a precision touchpad.
  - The number of monitors shown at a time is up to 4.
+ - In case an external monitor is not shown, read [detection of external monitors](#detection-of-external-monitors).
 
 ## Add-on Features
 
@@ -80,9 +86,11 @@ Add-on features are available for Microsoft Store version on a subscription basi
 
 ![Screenshot](Images/Screenshot_keys_en.png)
 
+All hot keys for brightness can be switched to contrast by `To contrast` hot key. It can be switched back to brightness by `To brightness` hot key.
+
 ### Command-line options
 
-You can use command-line options to get/set the brigtness.
+You can use command-line options to get/set the brightness or contrast.
 
 | Actions                                | Options                                |
 |----------------------------------------|----------------------------------------|
@@ -93,7 +101,29 @@ You can use command-line options to get/set the brigtness.
 | Set brightness of a specified monitor. | /set [Device Instance ID] [Brightness] |
 | Set brightness of all monitors.        | /set all [Brightness]                  |
 
-If this app is called with `/get` option, it will return [Device Instance ID] [Monitor name] [Brightness]. The device instance ID is an unique identifier given by the OS to each monitor. The brightness ranges from 0 to 100%. It can be specified with brightness itself (e.g. 20), increase (e.g. +10) or decrease (e.g. -10) when you use `/set` option.
+The device instance ID is an unique identifier given by the OS to each monitor. It must be enclosed in quotes. 
+
+You can switch to contrast by inserting `contrast` after `/get` or `/set` (e.g. `/get contrast all`).
+
+If this app is called with `/get` or `/set`, it will return
+
+```
+[Device Instance ID] [Monitor name] [Brightness] B
+```
+
+'B' at the end indicates brightness. In addition, '*' will be added in the case of a selected monitor. 
+
+If this app is called with `/get contrast` or `/set contrast`, it will return
+
+```
+[Device Instance ID] [Monitor name] [Contrast] C
+```
+
+'C' at the end indicates contrast. If contrast is not supported by a monitor, '-' will be shown instead.
+
+The brightness or contrast ranges from 0 to 100%. When you use `/set` option, it can be specified with the number itself (e.g. 20), increase (e.g. +10) or decrease (e.g. -10).
+
+The options can be executed consecutively (e.g. `monitorian /set 20 /set contrast 40`).
 
 You can call this app by its name `Monitorian` in command prompt or bat file. From Task Scheduler, it can be performed by the path to its alias `%LOCALAPPDATA%\Microsoft\WindowsApps\Monitorian.exe`. For example, to increase brightness of all monitors by 30%, the Action will be the following:
 
@@ -101,13 +131,35 @@ You can call this app by its name `Monitorian` in command prompt or bat file. Fr
 
 The code for add-on features is not included in this repository.
 
+## Detection of external monitors
+
+This app checks if each external monitor is controllable through DDC/CI and shows only controllable ones. 
+
+For this purpose, this app requests a monitor to send its capabilities information through DDC/CI and checks if it includes the capabilities to get/set the brightness. If capabilities information is not received or these capabilities are not included, such monitor will be regarded as not controllable through DDC/CI.
+
+This function has been tested and worked well in most cases. Therefore, if a monitor is not shown, it is most likely caused by hardware-oriented reasons that cannot be solved by this app. Such reasons include:
+
+1. The monitor model does not support DDC/CI.
+
+1. The monitor's DDC/CI setting is OFF. You may need to change the setting by OSD menu.
+
+1. The monitor's DDC/CI function is weird. Some monitors are found not to return correct capabilities information.
+
+1. The PC's connector does not support DDC/CI.
+
+1. The cable, converter, or docking station which connects the PC and the monitor is not compatible with DDC/CI. Thunderbolt/USB-C cables are generally compatible but converters aren't. Surface Dock and Surface Dock 2 are known to be compatible. 
+
+1. The monitor or the PC have issues including contact failture in connector. This is particularly the case for old monitors.
+
+If you think it is worth to report, read [reporting](#reporting) and then create an issue with logs and other relevant information. Please note that an issue which does not include any meaningful clue will be closed.
+
 ## Development
 
-This app is a WPF app developed and tested with Surface Pro 4 and 7.
+This app is a WPF app developed and tested with Surface Pro series.
 
 ### Reporting
 
-The controllability of an external monitor depends on whether the monitor successfully responds to DDC/CI commands. Even if a monitor is expected to be DDC/CI compatible, it may fail to respond (a) if the monitor is weird, (b) if its connection to the system is problematic, or (c) when the system starts or resumes. If an issue is case (a) or (b), this app cannot help it. If case (c), this app may be able to handle it.
+The controllability of an external monitor depends on whether the monitor successfully responds to DDC/CI commands. Even if a monitor is expected to be DDC/CI compatible, it may fail to respond typically when the system starts or resumes.
 
 In any case, reporting on the controllability of a monitor MUST include probe.log and operation.log described below. The logs will be the starting point to look into the issue.
 
@@ -122,11 +174,13 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 
 ### Operations
 
- - As part of testing, you can record operations to scan monitors and reflect their states. To enable the recording, check `Make operation log` in the hidden menu. After that, __operation.log__ can be copied by `Copy operation log`.
+ - As part of testing, you can set this app to record operations to scan monitors and reflect their states. To enable the recording, check `Make operation log` in the hidden menu. After some information is recorded, you will be able to copy __operation.log__ by `Copy operation log`.
+ - If you notice an issue, <ins>enable the recording and then wait until the issue happens. When you notice the issue again, copy this log and check the information including the change before and after the issue.</ins>
 
 ### Command-line arguments
 
  - As part of testing, you can store persistent arguments in `Command-line arguments` in the hidden menu. They will be tested along with current arguments when this app starts.
+ - For example, if you want this app to always use English language (default), set `/lang en` in this box.
 
 ### Exceptions
 
@@ -143,7 +197,7 @@ In any case, reporting on the controllability of a monitor MUST include probe.lo
 | Windows 10 SDK (10.0.19041.0)                               | TargetPlatformVersion  |
 
 3. Load the solution by specifying `/Source/Monitorian.sln`. Then go to the solution explorer and right click the solution name and execute `Restore NuGet Packages`.
-4. To open installer project, install [WiX Toolset Build Tools](https://wixtoolset.org/releases/) and [WiX Toolset Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=WixToolset.WiXToolset). For Visual Studio 2022, Use [latest release](https://github.com/wixtoolset/VisualStudioExtension/releases/tag/v1.0.0.12).
+4. To open installer project, install [WiX Toolset Build Tools](https://wixtoolset.org/releases/) and [WiX Toolset Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=WixToolset.WiXToolset). For Visual Studio 2022, Use [latest release](https://github.com/wixtoolset/VisualStudioExtension/releases/tag/v1.0.0.18).
 
 ### Globalization
 
@@ -152,7 +206,65 @@ An alternative language can be shown by adding a Resources (.resx) file into `/S
  - The file name must be in `Resources.[language-culture].resx` format.
  - The name of a name/value pair must correspond to that in the default `Resources.resx` file to override it.
 
+### Reference
+
+ - VESA [Monitor Control Command Set (MCCS)](https://www.google.co.jp/search?q=VESA+Monitor+Control+Command+Set+Standard+MCCS) standard
+
 ## History
+
+Ver 4.2 2023-3-21
+
+ - Change function to change in unison
+ - Supplement French (fr) language. Thanks to @Rikiiiiiii!
+ 
+Ver 4.1 2023-3-13
+
+ - Improve internal code
+ - Supplement Ukrainian (uk-UA) language. Thanks to @kaplun07!
+ - Supplement Russian (ru-RU) language. Thanks to @San4es!
+
+Ver 4.0 2022-12-31
+
+ - Modify UI
+ - Add Ukrainian (uk-UA) language. Thanks to @kaplun07!
+
+Ver 3.15 2022-12-4
+
+ - Fix touchpad swipe
+ - Supplement Simplified Chinese (zh-Hans) language. Thanks to @FrzMtrsprt!
+
+Ver 3.14 2022-10-23
+
+ - Make change of monitors arrangement reflected immediately
+
+Ver 3.13 2022-8-29
+
+ - Shorten scan time when multiple external monitors exist
+ - Supplement German (de) language. Thanks to @uDEV2019!
+ 
+Ver 3.12 2022-7-4
+
+ - Enable mouse horizontal wheel to change brigtness concurrently (except that in unison)
+
+Ver 3.11 2022-6-2
+
+ - Enable to use accent color for brightness
+ - Supplement Korean (ko-KR) language. Thanks to @VenusGirl!
+ - Fix error message for unreachable monitor
+
+Ver 3.10 2022-4-12
+
+ - Redesign small slider
+ - Add Catalan (ca) language. Thanks to @ericmp33!
+ - Supplement Spanish (es) language. Thanks to @ericmp33!
+ - Improve Simplified Chinese (zh-Hans) language. Thanks to @FISHandCHEAP!
+ - Supplement Traditional Chinese (zh-Hant) language. Thanks to @XMuli!
+
+Ver 3.9 2022-1-20
+
+ - Add Portuguese (pt-BR) language. Thanks to @guilhermgonzaga!
+ - Supplement Simplified Chinese (zh-Hans) language. Thanks to @XMuli!
+ - Fix Dutch (nl-NL) language. Thanks to @JordyEGNL!
 
 Ver 3.8 2021-12-18
 
@@ -165,8 +277,8 @@ Ver 3.7 2021-12-3
 
 Ver 3.6 2021-9-30
 
- - Add Italian (it) language. Thanks to @GhostyJade!
  - Fix count for scan process
+ - Add Italian (it) language. Thanks to @GhostyJade!
 
 Ver 3.5 2021-9-9
 

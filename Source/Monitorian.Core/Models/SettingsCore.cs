@@ -27,9 +27,20 @@ namespace Monitorian.Core.Models
 		public bool UsesLargeElements
 		{
 			get => _usesLargeElements;
-			set => SetPropertyValue(ref _usesLargeElements, value);
+			set => SetProperty(ref _usesLargeElements, value);
 		}
 		private bool _usesLargeElements = true; // Default
+
+		/// <summary>
+		/// Whether to use accent color for brightness
+		/// </summary>
+		[DataMember]
+		public bool UsesAccentColor
+		{
+			get => _usesAccentColor;
+			set => SetProperty(ref _usesAccentColor, value);
+		}
+		private bool _usesAccentColor;
 
 		/// <summary>
 		/// Whether to show adjusted brightness
@@ -38,20 +49,9 @@ namespace Monitorian.Core.Models
 		public bool ShowsAdjusted
 		{
 			get => _showsAdjusted;
-			set => SetPropertyValue(ref _showsAdjusted, value);
+			set => SetProperty(ref _showsAdjusted, value);
 		}
 		private bool _showsAdjusted = true; // default
-
-		/// <summary>
-		/// Whether to show current number
-		/// </summary>
-		[DataMember]
-		public bool ShowsNumber
-		{
-			get => _showsNumber;
-			set => SetPropertyValue(ref _showsNumber, value);
-		}
-		private bool _showsNumber = true; // default
 
 		/// <summary>
 		/// Whether to order by monitors arrangement
@@ -60,7 +60,7 @@ namespace Monitorian.Core.Models
 		public bool OrdersArrangement
 		{
 			get => _ordersArrangement;
-			set => SetPropertyValue(ref _ordersArrangement, value);
+			set => SetProperty(ref _ordersArrangement, value);
 		}
 		private bool _ordersArrangement = true; // default
 
@@ -71,7 +71,7 @@ namespace Monitorian.Core.Models
 		public bool DefersChange
 		{
 			get => _defersChange;
-			set => SetPropertyValue(ref _defersChange, value);
+			set => SetProperty(ref _defersChange, value);
 		}
 		private bool _defersChange;
 
@@ -82,7 +82,7 @@ namespace Monitorian.Core.Models
 		public bool EnablesUnison
 		{
 			get => _enablesUnison;
-			set => SetPropertyValue(ref _enablesUnison, value);
+			set => SetProperty(ref _enablesUnison, value);
 		}
 		private bool _enablesUnison;
 
@@ -93,7 +93,7 @@ namespace Monitorian.Core.Models
 		public bool EnablesRange
 		{
 			get => _enablesRange;
-			set => SetPropertyValue(ref _enablesRange, value);
+			set => SetProperty(ref _enablesRange, value);
 		}
 		private bool _enablesRange;
 
@@ -104,7 +104,7 @@ namespace Monitorian.Core.Models
 		public bool EnablesContrast
 		{
 			get => _enablesContrast;
-			set => SetPropertyValue(ref _enablesContrast, value);
+			set => SetProperty(ref _enablesContrast, value);
 		}
 		private bool _enablesContrast;
 
@@ -126,7 +126,7 @@ namespace Monitorian.Core.Models
 		public string SelectedDeviceInstanceId
 		{
 			get => _selectedDeviceInstanceId;
-			set => SetPropertyValue(ref _selectedDeviceInstanceId, value);
+			set => SetProperty(ref _selectedDeviceInstanceId, value);
 		}
 		private string _selectedDeviceInstanceId;
 
@@ -137,7 +137,7 @@ namespace Monitorian.Core.Models
 		public bool MakesOperationLog
 		{
 			get => _makesOperationLog;
-			set => SetPropertyValue(ref _makesOperationLog, value);
+			set => SetProperty(ref _makesOperationLog, value);
 		}
 		private bool _makesOperationLog;
 
@@ -146,15 +146,20 @@ namespace Monitorian.Core.Models
 		protected Type[] KnownTypes { get; set; }
 
 		private const string SettingsFileName = "settings.xml";
-		private readonly string _fileName;
 
-		public SettingsCore() : this(null)
-		{ }
-
-		protected SettingsCore(string fileName)
+		protected string FileName
 		{
-			this._fileName = !string.IsNullOrWhiteSpace(fileName) ? fileName : SettingsFileName;
+			get => _fileName;
+			set
+			{
+				if (!string.IsNullOrWhiteSpace(value))
+					_fileName = value;
+			}
 		}
+		private string _fileName = SettingsFileName;
+
+		public SettingsCore()
+		{ }
 
 		private Throttle _save;
 
@@ -166,8 +171,8 @@ namespace Monitorian.Core.Models
 				TimeSpan.FromMilliseconds(100),
 				() => Save(this));
 
-			MonitorCustomizations.CollectionChanged += (sender, e) => RaisePropertyChanged(nameof(MonitorCustomizations));
-			PropertyChanged += async (sender, e) => await _save.PushAsync();
+			MonitorCustomizations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MonitorCustomizations));
+			PropertyChanged += async (_, _) => await _save.PushAsync();
 		}
 
 		#region Load/Save
@@ -176,7 +181,7 @@ namespace Monitorian.Core.Models
 		{
 			try
 			{
-				AppDataService.Load(instance, _fileName, KnownTypes);
+				AppDataService.Load(instance, FileName, KnownTypes);
 			}
 			catch (Exception ex)
 			{
@@ -189,7 +194,7 @@ namespace Monitorian.Core.Models
 		{
 			try
 			{
-				AppDataService.Save(instance, _fileName, KnownTypes);
+				AppDataService.Save(instance, FileName, KnownTypes);
 			}
 			catch (Exception ex)
 			{
@@ -216,16 +221,24 @@ namespace Monitorian.Core.Models
 		[DataMember]
 		public byte Highest { get; private set; } = 100;
 
-		public MonitorCustomizationItem(string name, bool isUnison)
+		public MonitorCustomizationItem(string name, bool isUnison, byte lowest, byte highest)
 		{
 			this.Name = name;
 			this.IsUnison = isUnison;
-		}
-
-		public MonitorCustomizationItem(string name, bool isUnison, byte lowest, byte highest) : this(name, isUnison)
-		{
 			this.Lowest = lowest;
 			this.Highest = highest;
+		}
+
+		internal bool IsValid
+		{
+			get => (Lowest < Highest) && (Highest <= 100);
+		}
+
+		internal bool IsDefault
+		{
+			get => (Name is null)
+				&& (IsUnison == default)
+				&& (Lowest == 0) && (Highest == 100);
 		}
 	}
 }

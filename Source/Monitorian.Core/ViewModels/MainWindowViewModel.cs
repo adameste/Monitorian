@@ -32,7 +32,9 @@ namespace Monitorian.Core.ViewModels
 					_monitorsView = new ListCollectionView(_controller.Monitors);
 					if (Settings.OrdersArrangement)
 					{
-						_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.MonitorTop), ListSortDirection.Ascending));
+						_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.MonitorTopLeft), ListSortDirection.Ascending));
+						_monitorsView.IsLiveSorting = true;
+						_monitorsView.LiveSortingProperties.Add(nameof(MonitorViewModel.MonitorTopLeft));
 					}
 					_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.DisplayIndex), ListSortDirection.Ascending));
 					_monitorsView.SortDescriptions.Add(new SortDescription(nameof(MonitorViewModel.MonitorIndex), ListSortDirection.Ascending));
@@ -54,7 +56,7 @@ namespace Monitorian.Core.ViewModels
 				//case NotifyCollectionChangedAction.Reset:
 				case NotifyCollectionChangedAction.Add:
 				case NotifyCollectionChangedAction.Remove:
-					RaisePropertyChanged(nameof(IsMonitorsEmpty));
+					OnPropertyChanged(nameof(IsMonitorsEmpty));
 
 					if (MonitorsView.CurrentItem is null)
 					{
@@ -78,7 +80,7 @@ namespace Monitorian.Core.ViewModels
 		private void OnScanningChanged(object sender, bool e)
 		{
 			IsScanning = e;
-			RaisePropertyChanged(nameof(IsScanning));
+			OnPropertyChanged(nameof(IsScanning));
 		}
 
 		public bool IsScanning { get; private set; }
@@ -88,21 +90,22 @@ namespace Monitorian.Core.ViewModels
 			switch (e.PropertyName)
 			{
 				case nameof(Settings.OrdersArrangement):
-					var orderDescription = MonitorsView.SortDescriptions.FirstOrDefault(x => x.PropertyName == nameof(MonitorViewModel.MonitorTop));
+					var description = new SortDescription(nameof(MonitorViewModel.MonitorTopLeft), ListSortDirection.Ascending);
+					int index = MonitorsView.SortDescriptions.IndexOf(description);
 
-					if (Settings.OrdersArrangement)
+					switch (Settings.OrdersArrangement, index)
 					{
-						if (orderDescription != default)
-							return;
+						case (true, < 0):
+							MonitorsView.SortDescriptions.Insert(0, description);
+							MonitorsView.IsLiveSorting = true;
+							MonitorsView.LiveSortingProperties.Add(description.PropertyName);
+							break;
 
-						MonitorsView.SortDescriptions.Insert(0, new SortDescription(nameof(MonitorViewModel.MonitorTop), ListSortDirection.Ascending));
-					}
-					else
-					{
-						if (orderDescription == default)
-							return;
-
-						MonitorsView.SortDescriptions.Remove(orderDescription);
+						case (false, >= 0):
+							MonitorsView.SortDescriptions.RemoveAt(index);
+							MonitorsView.IsLiveSorting = false;
+							MonitorsView.LiveSortingProperties.Remove(description.PropertyName);
+							break;
 					}
 
 					MonitorsView.Refresh();

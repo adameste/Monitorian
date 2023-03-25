@@ -19,7 +19,7 @@ namespace Monitorian.Core.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
@@ -88,6 +88,15 @@ namespace Monitorian.Core.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Change brightness in unison.
+        /// </summary>
+        public static string ChangeUnison {
+            get {
+                return ResourceManager.GetString("ChangeUnison", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Close.
         /// </summary>
         public static string Close {
@@ -108,9 +117,18 @@ namespace Monitorian.Core.Properties {
         /// <summary>
         ///   Looks up a localized string similar to Save operation log to Desktop?.
         /// </summary>
-        public static string CopyOperationMessage {
+        public static string CopySaveOperationMessage {
             get {
-                return ResourceManager.GetString("CopyOperationMessage", resourceCulture);
+                return ResourceManager.GetString("CopySaveOperationMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Wait for more information to be recorded to operaton log..
+        /// </summary>
+        public static string CopyWaitOperationMessage {
+            get {
+                return ResourceManager.GetString("CopyWaitOperationMessage", resourceCulture);
             }
         }
         
@@ -142,7 +160,7 @@ namespace Monitorian.Core.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Enable moving in unison.
+        ///   Looks up a localized string similar to Enable changing brightness in unison.
         /// </summary>
         public static string EnableUnison {
             get {
@@ -156,15 +174,6 @@ namespace Monitorian.Core.Properties {
         public static string MakeOperation {
             get {
                 return ResourceManager.GetString("MakeOperation", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Move in unison.
-        /// </summary>
-        public static string MoveUnison {
-            get {
-                return ResourceManager.GetString("MoveUnison", resourceCulture);
             }
         }
         
@@ -210,6 +219,15 @@ namespace Monitorian.Core.Properties {
         public static string Rescan {
             get {
                 return ResourceManager.GetString("Rescan", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Restore brightness on reconnection.
+        /// </summary>
+        public static string RestoreReconnection {
+            get {
+                return ResourceManager.GetString("RestoreReconnection", resourceCulture);
             }
         }
         
@@ -273,6 +291,15 @@ namespace Monitorian.Core.Properties {
         public static string StatusReasonDdcNotEnabled {
             get {
                 return ResourceManager.GetString("StatusReasonDdcNotEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use accent color for brightness.
+        /// </summary>
+        public static string UseAccentColor {
+            get {
+                return ResourceManager.GetString("UseAccentColor", resourceCulture);
             }
         }
         

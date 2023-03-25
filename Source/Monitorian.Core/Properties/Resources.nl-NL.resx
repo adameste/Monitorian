@@ -126,13 +126,16 @@
   <data name="ChangeRange" xml:space="preserve">
     <value>Verander aanpasbaar bereik</value>
   </data>
+  <data name="ChangeUnison" xml:space="preserve">
+    <value>Waardes samen aanpassen</value>
+  </data>
   <data name="Close" xml:space="preserve">
     <value>Sluiten</value>
   </data>
   <data name="CopyOperation" xml:space="preserve">
     <value>Bewerkingslogboek kopiëren</value>
   </data>
-  <data name="CopyOperationMessage" xml:space="preserve">
+  <data name="CopySaveOperationMessage" xml:space="preserve">
     <value>Bewerkingslogboek kopiëren naar de Desktop?</value>
   </data>
   <data name="DeferChange" xml:space="preserve">
@@ -149,9 +152,6 @@
   </data>
   <data name="MakeOperation" xml:space="preserve">
     <value>Bewerkingslogboek maken</value>
-  </data>
-  <data name="MoveUnison" xml:space="preserve">
-    <value>Waardes samen aanpassen</value>
   </data>
   <data name="OrderArrangement" xml:space="preserve">
     <value>Ordenen op monitor volgorde</value>
@@ -190,6 +190,6 @@
     <value>DDC/CI wordt niet ondersteund of is niet aangezet bij uw monitor</value>
   </data>
   <data name="UseLargeElements" xml:space="preserve">
-    <value>Gebruike grote schuifregelaars</value>
+    <value>Gebruik grote schuifregelaars</value>
   </data>
 </root>

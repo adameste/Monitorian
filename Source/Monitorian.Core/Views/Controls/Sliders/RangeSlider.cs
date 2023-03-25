@@ -11,8 +11,8 @@ using System.Windows.Input;
 
 namespace Monitorian.Core.Views.Controls
 {
-	[TemplatePart(Name = "PART_StartTrack", Type = typeof(Track))]
-	[TemplatePart(Name = "PART_EndTrack", Type = typeof(Track))]
+	[TemplatePart(Name = nameof(Named.PART_StartTrack), Type = typeof(Track))]
+	[TemplatePart(Name = nameof(Named.PART_EndTrack), Type = typeof(Track))]
 	public class RangeSlider : EnhancedSlider
 	{
 		static RangeSlider()
@@ -37,12 +37,43 @@ namespace Monitorian.Core.Views.Controls
 
 		#region Range
 
+		/// <summary>
+		/// Attempts to get the current level (from 0 to 1) within selected range. 
+		/// </summary>
+		/// <param name="level">Current level</param>
+		/// <returns>True if the current value is within selected range</returns>
+		/// <remarks>
+		/// This level is translated from/to the current value.
+		/// </remarks>
+		protected virtual bool TryGetLevel(out double level) => TryGetLevel(this.Value, out level);
+
+		protected virtual bool TryGetLevel(double value, out double level)
+		{
+			if (value < this.SelectionStart)
+			{
+				level = 0;
+				return false;
+			}
+			if (value > this.SelectionEnd)
+			{
+				level = 1;
+				return false;
+			}
+			level = (value - this.SelectionStart) / (this.SelectionEnd - this.SelectionStart);
+			return true;
+		}
+
+		protected virtual bool SetLevel(double level)
+		{
+			return UpdateValue(this.SelectionStart + (this.SelectionEnd - this.SelectionStart) * level);
+		}
+
 		protected override bool UpdateValue(double value)
 		{
 			// Overriding CoerceValueCallback of ValueProperty will not be enough to limit the range
 			// of value because it does not coerce a value sent to binding source.
 
-			var adjustedValue = Math.Min(this.SelectionEnd, Math.Max(this.SelectionStart, (double)value));
+			var adjustedValue = Math.Min(this.SelectionEnd, Math.Max(this.SelectionStart, value));
 			if (this.Value == adjustedValue)
 				return false;
 
@@ -108,6 +139,12 @@ namespace Monitorian.Core.Views.Controls
 				|| (this.Minimum < this.SelectionStart) || (this.SelectionEnd < this.Maximum);
 		}
 
+		private enum Named
+		{
+			PART_StartTrack,
+			PART_EndTrack
+		}
+
 		private Track _startTrack;
 		private Track _endTrack;
 
@@ -116,8 +153,8 @@ namespace Monitorian.Core.Views.Controls
 			ClearBindingAndRemoveDragEventHandler(_startTrack);
 			ClearBindingAndRemoveDragEventHandler(_endTrack);
 
-			_startTrack = this.GetTemplateChild("PART_StartTrack") as Track;
-			_endTrack = this.GetTemplateChild("PART_EndTrack") as Track;
+			_startTrack = this.GetTemplateChild(nameof(Named.PART_StartTrack)) as Track;
+			_endTrack = this.GetTemplateChild(nameof(Named.PART_EndTrack)) as Track;
 
 			SetBindingAndAddDragEventHandler(_startTrack, nameof(Slider.SelectionStart));
 			SetBindingAndAddDragEventHandler(_endTrack, nameof(Slider.SelectionEnd));

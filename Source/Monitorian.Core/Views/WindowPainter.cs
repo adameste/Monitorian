@@ -7,19 +7,20 @@ using System.Windows;
 using System.Windows.Media;
 
 using Monitorian.Core.Helper;
+using Monitorian.Supplement;
 using ScreenFrame.Painter;
 
 namespace Monitorian.Core.Views
 {
 	public class WindowPainter : ScreenFrame.Painter.WindowPainter
 	{
-		public WindowPainter() : base(AppKeeper.DefinedArguments)
+		public WindowPainter() : base(AppKeeper.StandardArguments)
 		{ }
 
 		public static new IReadOnlyCollection<string> Options => ScreenFrame.Painter.WindowPainter.Options.Concat(ColorPairs.Keys).ToArray();
 
 		/// <summary>
-		/// Color changeable elements of window
+		/// Color changeable background/border
 		/// </summary>
 		private enum ColorElement
 		{
@@ -65,8 +66,8 @@ namespace Monitorian.Core.Views
 			int i = 0;
 			while (i < arguments.Count - 1)
 			{
-				if (colorPairs.TryGetValue(arguments[i], out ColorElement key) &&
-					TryParse(arguments[i + 1], out Brush value))
+				if (colorPairs.TryGetValue(arguments[i], out ColorElement key)
+					&& TryParse(arguments[i + 1], out Brush value))
 				{
 					colors[key] = value;
 					i++;
@@ -77,15 +78,17 @@ namespace Monitorian.Core.Views
 			_colors = colors.Any() ? colors : null;
 		}
 
+		#region Theme or background/border colors
+
 		protected override void PaintBackground(Window window)
 		{
-			if (ChangeColors(window))
+			if (ChangeBackgroundColors(window))
 				return;
 
 			base.PaintBackground(window);
 		}
 
-		private bool ChangeColors(Window window)
+		private bool ChangeBackgroundColors(Window window)
 		{
 			if (_colors is not { Count: > 0 })
 				return false;
@@ -135,5 +138,83 @@ namespace Monitorian.Core.Views
 					break;
 			}
 		}
+
+		public string GetIconPath()
+		{
+			return Theme switch
+			{
+				ColorTheme.Light => "pack://application:,,,/Monitorian.Core;component/Resources/Icons/LightTrayIcon.ico",
+				ColorTheme.Dark or _ => "pack://application:,,,/Monitorian.Core;component/Resources/Icons/DarkTrayIcon.ico",
+			};
+		}
+
+		#endregion
+
+		#region Accent color
+
+		/// <summary>
+		/// Whether the accent color is supported
+		/// </summary>
+		/// <remarks>
+		/// The accent color on Windows 8.1 seems not have shaded variants and so is not considered
+		/// as utilizable here.
+		/// </remarks>
+		public bool IsAccentColorSupported { get; } = OsVersion.Is10OrGreater;
+
+		private class ColorContainer
+		{
+			private static readonly ResourceDictionary _generic;
+
+			static ColorContainer() => _generic = Application.Current.Resources.MergedDictionaries.Single(x => x.Source.OriginalString.EndsWith("Generic.xaml"));
+
+			private readonly string _key;
+			private readonly Color _originalColor;
+
+			public ColorContainer(string key)
+			{
+				this._key = key;
+				_originalColor = Color;
+			}
+
+			public Color Color
+			{
+				get => (Color)_generic[_key];
+				set => _generic[_key] = value;
+			}
+
+			public void Revert() => Color = _originalColor;
+		}
+
+		private readonly Lazy<ColorContainer> _staticColorContaier = new(() => new("App.Background.Accent.StaticColor"));
+		private readonly Lazy<ColorContainer> _mouseOverColorContainer = new(() => new("App.Background.Accent.MouseOverColor"));
+		private readonly Lazy<ColorContainer> _pressedColorContainer = new(() => new("App.Background.Accent.PressedColor"));
+
+		public void AttachAccentColors()
+		{
+			if (!IsAccentColorSupported)
+				return;
+
+			ChangeAccentColors();
+
+			RespondsAccentColorChanged = true;
+		}
+
+		public void DetachAccentColors()
+		{
+			RespondsAccentColorChanged = false;
+
+			_staticColorContaier.Value.Revert();
+			_mouseOverColorContainer.Value.Revert();
+			_pressedColorContainer.Value.Revert();
+		}
+
+		protected override void ChangeAccentColors()
+		{
+			_staticColorContaier.Value.Color = UIInformation.GetAccentColor();
+			_mouseOverColorContainer.Value.Color = UIInformation.GetAccentLightColor();
+			_pressedColorContainer.Value.Color = _mouseOverColorContainer.Value.Color;
+		}
+
+		#endregion
 	}
 }

@@ -52,9 +52,11 @@
       <HintPath>$(MSBuildProgramFiles32)\Windows Kits\10\UnionMetadata\$(TargetPlatformVersion)\Windows.winmd</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DisplayInformation.cs" />
+    <Compile Include="Launcher.cs" />
     <Compile Include="LightInformation.cs" />
     <Compile Include="UIInformation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

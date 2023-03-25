@@ -23,11 +23,12 @@ namespace Monitorian.Core.ViewModels
 		{
 			this._controller = controller ?? throw new ArgumentNullException(nameof(controller));
 			this._monitor = monitor ?? throw new ArgumentNullException(nameof(monitor));
+			SetTopLeft();
 
 			LoadCustomization();
 		}
 
-		private readonly object _lock = new object();
+		private readonly object _lock = new();
 
 		internal void Replace(IMonitor monitor)
 		{
@@ -37,6 +38,7 @@ namespace Monitorian.Core.ViewModels
 				{
 					this._monitor.Dispose();
 					this._monitor = monitor;
+					SetTopLeft();
 				}
 			}
 			else
@@ -50,7 +52,6 @@ namespace Monitorian.Core.ViewModels
 		public byte DisplayIndex => _monitor.DisplayIndex;
 		public byte MonitorIndex => _monitor.MonitorIndex;
 		public Rect MonitorRect => _monitor.MonitorRect;
-		public double MonitorTop => _monitor.MonitorRect.Top;
 
 		#region Customization
 
@@ -62,7 +63,7 @@ namespace Monitorian.Core.ViewModels
 			get => _name ?? _monitor.Description;
 			set
 			{
-				if (SetPropertyValue(ref _name, GetValueOrNull(value)))
+				if (SetProperty(ref _name, GetValueOrNull(value)))
 					SaveCustomization();
 			}
 		}
@@ -75,7 +76,7 @@ namespace Monitorian.Core.ViewModels
 			get => _isUnison;
 			set
 			{
-				if (SetPropertyValue(ref _isUnison, value))
+				if (SetProperty(ref _isUnison, value))
 					SaveCustomization();
 			}
 		}
@@ -87,7 +88,7 @@ namespace Monitorian.Core.ViewModels
 		public bool IsRangeChanging
 		{
 			get => _isRangeChanging;
-			set => SetPropertyValue(ref _isRangeChanging, value);
+			set => SetProperty(ref _isRangeChanging, value);
 		}
 		private bool _isRangeChanging = false;
 
@@ -99,7 +100,7 @@ namespace Monitorian.Core.ViewModels
 			get => _rangeLowest;
 			set
 			{
-				if (SetPropertyValue(ref _rangeLowest, (byte)value))
+				if (SetProperty(ref _rangeLowest, (byte)value))
 					SaveCustomization();
 			}
 		}
@@ -113,7 +114,7 @@ namespace Monitorian.Core.ViewModels
 			get => _rangeHighest;
 			set
 			{
-				if (SetPropertyValue(ref _rangeHighest, (byte)value))
+				if (SetProperty(ref _rangeHighest, (byte)value))
 					SaveCustomization();
 			}
 		}
@@ -133,7 +134,7 @@ namespace Monitorian.Core.ViewModels
 				if (_monitor.Brightness == value)
 					return;
 
-				SetBrightness(value);
+				SetBrightness(value, false);
 
 				if (IsSelected)
 					_controller.SaveMonitorUserChanged(this);
@@ -154,9 +155,10 @@ namespace Monitorian.Core.ViewModels
 			switch (result.Status)
 			{
 				case AccessStatus.Succeeded:
-					RaisePropertyChanged(nameof(BrightnessSystemChanged)); // This must be prior to Brightness.
-					RaisePropertyChanged(nameof(Brightness));
-					RaisePropertyChanged(nameof(BrightnessSystemAdjusted));
+					BrightnessUpdatedTime = DateTimeOffset.Now;
+					OnPropertyChanged(nameof(BrightnessSystemChanged)); // This must be prior to Brightness.
+					OnPropertyChanged(nameof(Brightness));
+					OnPropertyChanged(nameof(BrightnessSystemAdjusted));
 					OnSucceeded();
 					return true;
 
@@ -174,6 +176,14 @@ namespace Monitorian.Core.ViewModels
 			}
 		}
 
+		public bool? UpdateBrightnessIfElapsed(TimeSpan duration)
+		{
+			if (DateTimeOffset.Now - BrightnessUpdatedTime < duration)
+				return null;
+
+			return UpdateBrightness();
+		}
+
 		public void IncrementBrightness()
 		{
 			IncrementBrightness(10);
@@ -188,7 +198,7 @@ namespace Monitorian.Core.ViewModels
 				return;
 
 			var size = tickSize * GetRangeRate();
-			var count = Math.Floor((Brightness - RangeLowest) / size);
+			var count = Math.Floor((Brightness - RangeLowest) / size + 0.01);
 			int brightness = RangeLowest + (int)Math.Ceiling((count + 1) * size);
 
 			SetBrightness(brightness, isCycle);
@@ -208,24 +218,21 @@ namespace Monitorian.Core.ViewModels
 				return;
 
 			var size = tickSize * GetRangeRate();
-			var count = Math.Ceiling((Brightness - RangeLowest) / size);
+			var count = Math.Ceiling((Brightness - RangeLowest) / size - 0.01);
 			int brightness = RangeLowest + (int)Math.Floor((count - 1) * size);
 
 			SetBrightness(brightness, isCycle);
 		}
 
-		private void SetBrightness(int brightness, bool isCycle)
+		public void SetBrightness(int brightness) => SetBrightness(brightness, false);
+
+		private bool SetBrightness(int brightness, bool isCycle)
 		{
 			if (brightness < RangeLowest)
 				brightness = isCycle ? RangeHighest : RangeLowest;
 			else if (RangeHighest < brightness)
 				brightness = isCycle ? RangeLowest : RangeHighest;
 
-			SetBrightness(brightness);
-		}
-
-		private bool SetBrightness(int brightness)
-		{
 			AccessResult result;
 			lock (_lock)
 			{
@@ -235,7 +242,8 @@ namespace Monitorian.Core.ViewModels
 			switch (result.Status)
 			{
 				case AccessStatus.Succeeded:
-					RaisePropertyChanged(nameof(Brightness));
+					BrightnessUpdatedTime = DateTimeOffset.Now;
+					OnPropertyChanged(nameof(Brightness));
 					OnSucceeded();
 					return true;
 
@@ -255,6 +263,8 @@ namespace Monitorian.Core.ViewModels
 			}
 		}
 
+		public DateTimeOffset BrightnessUpdatedTime { get; private set; }
+
 		#endregion
 
 		#region Contrast
@@ -266,7 +276,7 @@ namespace Monitorian.Core.ViewModels
 			get => IsContrastSupported && _isContrastChanging;
 			set
 			{
-				if (SetPropertyValue(ref _isContrastChanging, value) && value)
+				if (SetProperty(ref _isContrastChanging, value) && value)
 					UpdateContrast();
 			}
 		}
@@ -298,7 +308,8 @@ namespace Monitorian.Core.ViewModels
 			switch (result.Status)
 			{
 				case AccessStatus.Succeeded:
-					RaisePropertyChanged(nameof(Contrast));
+					ContrastUpdatedTime = DateTimeOffset.Now;
+					OnPropertyChanged(nameof(Contrast));
 					OnSucceeded();
 					return true;
 
@@ -316,8 +327,36 @@ namespace Monitorian.Core.ViewModels
 			}
 		}
 
+		public bool? UpdateContrastIfElapsed(TimeSpan duration)
+		{
+			if (DateTimeOffset.Now - ContrastUpdatedTime < duration)
+				return null;
+
+			return UpdateContrast();
+		}
+
+		public void IncrementContrast(int tickSize)
+		{
+			var size = (double)tickSize;
+			var count = Math.Floor(Contrast / size);
+			int contrast = (int)Math.Ceiling((count + 1) * size);
+
+			SetContrast(contrast);
+		}
+
+		public void DecrementContrast(int tickSize)
+		{
+			var size = (double)tickSize;
+			var count = Math.Ceiling(Contrast / size);
+			int contrast = (int)Math.Floor((count - 1) * size);
+
+			SetContrast(contrast);
+		}
+
 		private bool SetContrast(int contrast)
 		{
+			contrast = Math.Min(100, Math.Max(0, contrast));
+
 			AccessResult result;
 			lock (_lock)
 			{
@@ -327,7 +366,8 @@ namespace Monitorian.Core.ViewModels
 			switch (result.Status)
 			{
 				case AccessStatus.Succeeded:
-					RaisePropertyChanged(nameof(Contrast));
+					ContrastUpdatedTime = DateTimeOffset.Now;
+					OnPropertyChanged(nameof(Contrast));
 					OnSucceeded();
 					return true;
 
@@ -345,6 +385,20 @@ namespace Monitorian.Core.ViewModels
 					OnFailed();
 					return false;
 			}
+		}
+
+		public DateTimeOffset ContrastUpdatedTime { get; private set; }
+
+		#endregion
+
+		#region Temperature
+
+		public bool IsTemperatureSupported => _monitor.IsTemperatureSupported;
+
+		public void ChangeTemperature()
+		{
+			if (IsTemperatureSupported)
+				_monitor.ChangeTemperature();
 		}
 
 		#endregion
@@ -396,8 +450,8 @@ namespace Monitorian.Core.ViewModels
 				_controllableCount = NormalCount;
 				if (formerCount <= InitialCount)
 				{
-					RaisePropertyChanged(nameof(IsControllable));
-					RaisePropertyChanged(nameof(Message));
+					OnPropertyChanged(nameof(IsControllable));
+					OnPropertyChanged(nameof(Message));
 				}
 
 				_isConfirmed = true;
@@ -408,8 +462,8 @@ namespace Monitorian.Core.ViewModels
 		{
 			if (--_controllableCount == 0)
 			{
-				RaisePropertyChanged(nameof(IsControllable));
-				RaisePropertyChanged(nameof(Message));
+				OnPropertyChanged(nameof(IsControllable));
+				OnPropertyChanged(nameof(Message));
 			}
 		}
 
@@ -417,7 +471,7 @@ namespace Monitorian.Core.ViewModels
 		{
 			get
 			{
-				if (0 < _controllableCount)
+				if (IsReachable && (0 < _controllableCount))
 					return null;
 
 				LanguageService.Switch();
@@ -442,8 +496,8 @@ namespace Monitorian.Core.ViewModels
 			get => _isByKey;
 			set
 			{
-				if (SetPropertyValue(ref _isByKey, value))
-					RaisePropertyChanged(nameof(IsSelectedByKey));
+				if (SetProperty(ref _isByKey, value))
+					OnPropertyChanged(nameof(IsSelectedByKey));
 			}
 		}
 		private bool _isByKey;
@@ -453,8 +507,8 @@ namespace Monitorian.Core.ViewModels
 			get => _isSelected;
 			set
 			{
-				if (SetPropertyValue(ref _isSelected, value))
-					RaisePropertyChanged(nameof(IsSelectedByKey));
+				if (SetProperty(ref _isSelected, value))
+					OnPropertyChanged(nameof(IsSelectedByKey));
 			}
 		}
 		private bool _isSelected;
@@ -463,10 +517,33 @@ namespace Monitorian.Core.ViewModels
 
 		#endregion
 
+		#region Arrangement
+
+		public ulong MonitorTopLeft
+		{
+			get => _monitorTopLeft;
+			private set => SetProperty(ref _monitorTopLeft, value);
+		}
+		private ulong _monitorTopLeft;
+
+		private void SetTopLeft()
+		{
+			MonitorTopLeft = GetTopLeft(_monitor.MonitorRect.Location);
+
+			static ulong GetTopLeft(Point location)
+			{
+				var x = (long)Math.Round(location.X, MidpointRounding.AwayFromZero) + int.MaxValue;
+				var y = (long)Math.Round(location.Y, MidpointRounding.AwayFromZero) + int.MaxValue;
+				return (ulong)x | ((ulong)y << 32);
+			}
+		}
+
+		#endregion
+
 		public bool IsTarget
 		{
 			get => _isTarget;
-			set => SetPropertyValue(ref _isTarget, value);
+			set => SetProperty(ref _isTarget, value);
 		}
 		private bool _isTarget;
 

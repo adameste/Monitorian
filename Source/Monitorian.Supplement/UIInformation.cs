@@ -15,7 +15,7 @@ namespace Monitorian.Supplement
 	/// <see cref="Windows.UI.ViewManagement.UISettings"/> is available
 	/// on Windows 10 (version 10.0.10240.0) or newer.
 	/// </remarks>
-	public class UIInformation
+	public static class UIInformation
 	{
 		private static UISettings _uiSettings;
 
@@ -24,6 +24,18 @@ namespace Monitorian.Supplement
 		/// </summary>
 		/// <returns></returns>
 		public static Color GetAccentColor() => GetUIColor(UIColorType.Accent);
+
+		/// <summary>
+		/// Gets the system accent light color.
+		/// </summary>
+		/// <returns></returns>
+		public static Color GetAccentLightColor() => GetUIColor(UIColorType.AccentLight1);
+
+		/// <summary>
+		/// Gets the system accent dark color.
+		/// </summary>
+		/// <returns></returns>
+		public static Color GetAccentDarkColor() => GetUIColor(UIColorType.AccentDark1);
 
 		/// <summary>
 		/// Gets the system background color.

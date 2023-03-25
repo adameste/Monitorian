@@ -22,13 +22,13 @@ namespace Monitorian.Core
 			StartupAgent = new StartupAgent();
 		}
 
-		public Task<bool> StartAsync(StartupEventArgs e) => StartAsync(e, GetDefinedOptions());
+		public Task<bool> StartAsync(StartupEventArgs e) => StartAsync(e, Enumerable.Empty<string>());
 
-		public async Task<bool> StartAsync(StartupEventArgs e, params string[] definedOptions)
+		public async Task<bool> StartAsync(StartupEventArgs e, IEnumerable<string> additionalOptions)
 		{
-			// This method must be called before DefinedArguments or OtherArguments property is consumed.
+			// This method must be called before StandardArguments or OtherArguments property is consumed.
 			// An exception thrown in this method will not be handled.
-			await ParseArgumentsAsync(e, definedOptions);
+			await ParseArgumentsAsync(e, EnumerateStandardOptions().Concat(additionalOptions).ToArray());
 #if DEBUG
 			ConsoleService.TryStartWrite();
 #else
@@ -41,7 +41,7 @@ namespace Monitorian.Core
 			var (success, response) = StartupAgent.Start(ProductInfo.Product, ProductInfo.StartupTaskId, OtherArguments);
 			if (!success && (response is not null))
 			{
-				ConsoleService.Write(response.ToString());
+				ConsoleService.WriteLine(response);
 			}
 			return success;
 		}
@@ -56,18 +56,18 @@ namespace Monitorian.Core
 		public void Write(string content)
 		{
 			if (!string.IsNullOrEmpty(content))
-				ConsoleService.Write(content);
+				ConsoleService.WriteLine(content);
 		}
 
 		#region Arguments
 
-		public static IReadOnlyList<string> DefinedArguments => _definedArguments?.ToArray() ?? Array.Empty<string>();
-		private static string[] _definedArguments;
+		public static IReadOnlyList<string> StandardArguments => _standardArguments?.ToArray() ?? Array.Empty<string>();
+		private static string[] _standardArguments;
 
 		public static IReadOnlyList<string> OtherArguments => _otherArguments?.ToArray() ?? Array.Empty<string>();
 		private static string[] _otherArguments;
 
-		public static string[] GetDefinedOptions() =>
+		public static IEnumerable<string> EnumerateStandardOptions() =>
 			new[]
 			{
 				StartupAgent.Options,
@@ -75,10 +75,9 @@ namespace Monitorian.Core
 				LanguageService.Options,
 				WindowPainter.Options
 			}
-			.SelectMany(x => x)
-			.ToArray();
+			.SelectMany(x => x);
 
-		private async Task ParseArgumentsAsync(StartupEventArgs e, string[] definedOptions)
+		private async Task ParseArgumentsAsync(StartupEventArgs e, string[] standardOptions)
 		{
 			// Load persistent arguments.
 			var args = (await LoadArgumentsAsync())?.Split() ?? Array.Empty<string>();
@@ -86,19 +85,19 @@ namespace Monitorian.Core
 			// Concatenate current and persistent arguments.
 			// The first element of StartupEventArgs.Args is not executing assembly's path unlike
 			// that of arguments provided by Environment.GetCommandLineArgs method.
-			args = e.Args.Concat(args).ToArray();
+			args = e.Args.Concat(args.Select(x => x.Trim('"'))).ToArray();
 			if (args is not { Length: > 0 })
 				return;
 
 			const char optionMark = '/';
-			var isDefined = false;
+			var isStandard = false;
 
 			var buffer = args
 				.Where(x => !string.IsNullOrWhiteSpace(x))
-				.GroupBy(x => (x[0] == optionMark) ? (isDefined = definedOptions.Contains(x.ToLower())) : isDefined)
+				.GroupBy(x => (x[0] == optionMark) ? (isStandard = standardOptions.Contains(x.ToLower())) : isStandard)
 				.ToArray();
 
-			_definedArguments = buffer.SingleOrDefault(x => x.Key)?.ToArray();
+			_standardArguments = buffer.SingleOrDefault(x => x.Key)?.ToArray();
 			_otherArguments = buffer.SingleOrDefault(x => !x.Key)?.ToArray();
 		}
 
@@ -145,7 +144,7 @@ namespace Monitorian.Core
 
 		private void OnException(object sender, Exception exception, string exceptionName)
 		{
-			if (ConsoleService.Write(exception, exceptionName))
+			if (ConsoleService.WriteLine(exception, exceptionName))
 				return;
 
 			Logger.RecordException(exception);

@@ -14,9 +14,11 @@ namespace Monitorian.Core.Models.Monitor
 		byte DisplayIndex { get; }
 		byte MonitorIndex { get; }
 		Rect MonitorRect { get; }
+		bool IsInternal { get; }
 		bool IsReachable { get; }
 		bool IsBrightnessSupported { get; }
 		bool IsContrastSupported { get; }
+		bool IsTemperatureSupported { get; }
 
 		int Brightness { get; }
 		int BrightnessSystemAdjusted { get; }
@@ -28,6 +30,8 @@ namespace Monitorian.Core.Models.Monitor
 
 		AccessResult UpdateContrast();
 		AccessResult SetContrast(int contrast);
+
+		AccessResult ChangeTemperature();
 	}
 
 	public enum AccessStatus

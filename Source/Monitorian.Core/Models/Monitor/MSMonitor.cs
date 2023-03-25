@@ -32,7 +32,7 @@ namespace Monitorian.Core.Models.Monitor
 			[OnSerializing]
 			private void OnSerializing(StreamingContext context)
 			{
-				_brightnessLevelsString = string.Join(" ", BrightnessLevels ?? Array.Empty<byte>());
+				_brightnessLevelsString = string.Join(" ", BrightnessLevels ?? Enumerable.Empty<byte>());
 			}
 
 			public DesktopItem(
@@ -58,6 +58,9 @@ namespace Monitorian.Core.Models.Monitor
 
 		public static IEnumerable<DesktopItem> EnumerateDesktopMonitors()
 		{
+			if (_isBrightnessEventWatchable is false)
+				yield break;
+
 			var monitors = new List<DesktopItem>();
 
 			using (var @class = new ManagementClass("Win32_DesktopMonitor"))
@@ -191,7 +194,7 @@ namespace Monitorian.Core.Models.Monitor
 			if (string.IsNullOrWhiteSpace(deviceInstanceId))
 				throw new ArgumentNullException(nameof(deviceInstanceId));
 			if (brightness is < 0 or > 100)
-				throw new ArgumentOutOfRangeException(nameof(brightness), brightness, "The brightness must be within 0 to 100.");
+				throw new ArgumentOutOfRangeException(nameof(brightness), brightness, "The brightness must be from 0 to 100.");
 
 			try
 			{
@@ -233,6 +236,41 @@ namespace Monitorian.Core.Models.Monitor
 		}
 
 		private static ManagementObjectSearcher GetSearcher(string className) =>
-			new ManagementObjectSearcher(new ManagementScope(@"root\wmi"), new SelectQuery(className));
+			new(new ManagementScope(@"root\wmi"), new SelectQuery(className));
+
+		#region Event Watcher
+
+		private static bool? _isBrightnessEventWatchable = null;
+
+		public static (ManagementEventWatcher watcher, string message) StartBrightnessEventWatcher()
+		{
+			try
+			{
+				var option = new EventWatcherOptions(null, TimeSpan.FromSeconds(1), 1);
+				var watcher = new ManagementEventWatcher(@"root\wmi", "SELECT * FROM WmiMonitorBrightnessEvent", option);
+
+				watcher.Start();
+
+				_isBrightnessEventWatchable = true;
+				return (watcher, null);
+			}
+			catch (ManagementException me)
+			{
+				var message = $"Failed to start watcher for WmiMonitorBrightnessEvent. HResult: {me.HResult} ErrorCode: {me.ErrorCode}";
+				Debug.WriteLine(message + Environment.NewLine
+					+ me);
+
+				_isBrightnessEventWatchable = false;
+				return (null, message);
+			}
+		}
+
+		public static (string instanceName, byte brightness) ParseBrightnessEventArgs(EventArrivedEventArgs e)
+		{
+			var newEvent = e.NewEvent;
+			return ((string)newEvent["InstanceName"], (byte)newEvent["Brightness"]);
+		}
+
+		#endregion
 	}
 }

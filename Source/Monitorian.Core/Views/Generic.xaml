@@ -10,6 +10,10 @@
 	<Color x:Key="App.TargetColor">LightGray</Color>
 	<Color x:Key="App.OverlayColor">#48000000</Color>
 
+	<Color x:Key="App.Background.Accent.StaticColor">#FF2982CC</Color>
+	<Color x:Key="App.Background.Accent.MouseOverColor">#FF5CA4DE</Color>
+	<Color x:Key="App.Background.Accent.PressedColor">#FF5CA4DE</Color>
+
 	<SolidColorBrush x:Key="App.Foreground" Color="{DynamicResource App.ForegroundColor}"/>
 	<SolidColorBrush x:Key="App.Foreground.Shadow" Color="{DynamicResource App.ShadowColor}"/>
 	<SolidColorBrush x:Key="App.Foreground.Dusk" Color="#FFACACAC"/>
@@ -18,7 +22,6 @@
 	<SolidColorBrush x:Key="App.Border.Outline" Color="{DynamicResource App.LineColor}"/>
 	<SolidColorBrush x:Key="App.Background.Plain" Color="#FF1F1F1F"/>
 	<SolidColorBrush x:Key="App.Background.Translucent" Color="#D3161616"/>
-	<SolidColorBrush x:Key="App.Background.Accent" Color="#FF2982CC"/>
 
 	<Color x:Key="Icon.Foreground.NormalColor">#FF808080</Color>
 	<Color x:Key="Icon.Background.MouseOverColor">#33FFFFFF</Color>
@@ -46,7 +49,7 @@
 	<converters:VisibilityToBooleanFilterConverter x:Key="VisibilityToBooleanFilterConverterKey"/>
 	<converters:BooleanInverseConverter x:Key="BooleanInverseConverterKey"/>
 	<converters:VisibilityInverseConverter x:Key="VisibilityInverseConverterKey"/>
-	<converters:StringToVisibilityConverter x:Key="StringToVisibilityConverterKey"/>
+	<converters:ObjectToVisibilityConverter x:Key="ObjectToVisibilityConverterKey"/>
 
 	<!-- Menu separator -->
 	<Style x:Key="MenuSeparatorStyle" TargetType="{x:Type Separator}">
@@ -89,6 +92,7 @@
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="controls:TemplateElement.Visibility" Value="Collapsed"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -134,6 +138,7 @@
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="controls:TemplateElement.Visibility" Value="Collapsed"/>
 		<Setter Property="Template">
 			<Setter.Value>
@@ -165,6 +170,7 @@
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type ContentControl}">
@@ -202,6 +208,7 @@
 		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type controls:MultiToggleButton}">
@@ -233,6 +240,7 @@
 						</Grid>
 						<!-- Upper and lower grids are divided to set the width of lower grid. -->
 						<Grid Grid.Row="1"
+							  x:Name="lowerGrid"
 							  Width="{Binding ElementName=upperGrid, Path=ActualWidth}">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto"/>
@@ -262,10 +270,22 @@
 		</Setter>
 	</Style>
 
+	<!-- Plain TextElement -->
+	<Style x:Key="PlainTextStyle" TargetType="{x:Type FrameworkElement}">
+		<Setter Property="TextElement.Foreground" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="TextElement.FontSize" Value="12"/>
+	</Style>
+
+	<!-- Invalid TextElement -->
+	<Style x:Key="InvalidTextStyle" TargetType="{x:Type FrameworkElement}" BasedOn="{StaticResource PlainTextStyle}">
+		<Setter Property="TextElement.Foreground" Value="{StaticResource App.Foreground.Invalid}"/>
+	</Style>
+
 	<!-- Name TextBox -->
 	<Style x:Key="NameTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
 		<Setter Property="CaretBrush" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="14"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type TextBox}">
@@ -292,6 +312,7 @@
 	<Style x:Key="PlainTextBoxStyle" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
 		<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
 		<Setter Property="CaretBrush" Value="{StaticResource App.Foreground}"/>
+		<Setter Property="FontSize" Value="12"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type TextBox}">

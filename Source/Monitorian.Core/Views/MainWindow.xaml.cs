@@ -15,8 +15,6 @@ using System.Windows.Media.Imaging;
 using Monitorian.Core.Helper;
 using Monitorian.Core.Models;
 using Monitorian.Core.ViewModels;
-using Monitorian.Core.Views.Controls;
-using Monitorian.Core.Views.Touchpad;
 using ScreenFrame.Movers;
 
 namespace Monitorian.Core.Views
@@ -24,7 +22,6 @@ namespace Monitorian.Core.Views
 	public partial class MainWindow : Window
 	{
 		private readonly StickWindowMover _mover;
-		private readonly TouchpadTracker _tracker;
 		public MainWindowViewModel ViewModel => (MainWindowViewModel)this.DataContext;
 
 		private readonly KeyboardHook _brightnessDownHook;
@@ -44,27 +41,19 @@ namespace Monitorian.Core.Views
 			_mover = new StickWindowMover(this, controller.NotifyIconContainer.NotifyIcon);
 			_controller = controller;
 
-
-			if (OsVersion.Is11OrGreater)
-				_mover.KeepsDistance = true;
+			_mover = new StickWindowMover(this, controller.NotifyIconContainer.NotifyIcon)
+			{
+				KeepsDistance = true
+			};
 
 			controller.WindowPainter.Add(this);
 			controller.WindowPainter.ThemeChanged += (_, _) =>
 			{
 				ViewModel.MonitorsView.Refresh();
 			};
-
-			_tracker = new TouchpadTracker(this);
-			_tracker.ManipulationDelta += (_, delta) =>
-			{
-				var slider = FocusManager.GetFocusedElement(this) as EnhancedSlider;
-				slider?.ChangeValue(delta);
-			};
-			_tracker.ManipulationCompleted += (_, _) =>
-			{
-				var slider = FocusManager.GetFocusedElement(this) as EnhancedSlider;
-				slider?.EnsureUpdateSource();
-			};
+			//controller.WindowPainter.AccentColorChanged += (_, _) =>
+			//{
+			//};
 		}
 
 		private void _brightnessDownHook_Triggered()
@@ -90,7 +79,7 @@ namespace Monitorian.Core.Views
 				UsesLargeElementsProperty,
 				new Binding(nameof(SettingsCore.UsesLargeElements))
 				{
-					Source = ((MainWindowViewModel)this.DataContext).Settings,
+					Source = ViewModel.Settings,
 					Mode = BindingMode.OneWay
 				});
 
@@ -138,7 +127,7 @@ namespace Monitorian.Core.Views
 					true,
 					(d, e) =>
 					{
-						// Setting the same value will not trigger calling this method.					
+						// Setting the same value will not trigger calling this method.
 
 						var window = (MainWindow)d;
 						if (window._defaultHeights is null)
@@ -189,6 +178,11 @@ namespace Monitorian.Core.Views
 						FocusManager.SetFocusedElement(this, currentFocusedElement);
 				}
 			}
+			catch (ArgumentException ex) when ((uint)ex.HResult is 0x80070057)
+			{
+				// Window.Show method can cause ArgumentException when internally calling
+				// CompositionTarget.SetRootVisual method.
+			}
 			finally
 			{
 				this.Topmost = false;
@@ -231,7 +225,7 @@ namespace Monitorian.Core.Views
 
 			ViewModel.Deactivate();
 
-			// Set time to prevent this window from being shown unintentionally. 
+			// Set time to prevent this window from being shown unintentionally.
 			_preventionTime = DateTimeOffset.Now + TimeSpan.FromSeconds(0.2);
 
 			ClearHide();

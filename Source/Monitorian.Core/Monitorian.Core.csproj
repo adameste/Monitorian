@@ -94,6 +94,7 @@
     <Compile Include="Models\OperationRecorder.cs" />
     <Compile Include="Models\ProductInfo.cs" />
     <Compile Include="Models\SettingsCore.cs" />
+    <Compile Include="Models\SystemInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Invariant.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -105,10 +106,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="ViewModels\DevSectionViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\MenuWindowViewModel.cs" />
     <Compile Include="ViewModels\MonitorViewModel.cs" />
-    <Compile Include="ViewModels\ProbeSectionViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="Views\Behaviors\FocusElementAction.cs" />
     <Compile Include="Views\Behaviors\FocusMenuBehavior.cs" />
@@ -116,6 +117,7 @@
     <Compile Include="Views\Behaviors\ItemSelectorBehavior.cs" />
     <Compile Include="Views\Behaviors\ItemSliderBehavior.cs" />
     <Compile Include="Views\Behaviors\MouseDownParentAction.cs" />
+    <Compile Include="Views\Behaviors\MouseHorizontalWheelBehavior.cs" />
     <Compile Include="Views\Controls\Sliders\CompoundSlider.cs" />
     <Compile Include="Views\Controls\Sliders\EnhancedSlider.cs" />
     <Compile Include="Views\Controls\Sliders\RangeSlider.cs" />
@@ -125,25 +127,25 @@
     <Compile Include="Views\Controls\IconButton.cs" />
     <Compile Include="Views\Controls\MultiToggleButton.cs" />
     <Compile Include="Views\Controls\PulseLabel.cs" />
-    <Compile Include="Views\Controls\ReversalLabel.cs" />
     <Compile Include="Views\Controls\SwitchTextBox.cs" />
     <Compile Include="Views\Controls\TemplateElement.cs" />
     <Compile Include="Views\Converters\BooleanInverseConverter.cs" />
     <Compile Include="Views\Converters\BooleanToVisibilityTurnConverter.cs" />
-    <Compile Include="Views\Converters\StringToVisibilityConverter.cs" />
+    <Compile Include="Views\Converters\ObjectToVisibilityConverter.cs" />
     <Compile Include="Views\Converters\VisibilityInverseConverter.cs" />
     <Compile Include="Views\Converters\VisibilityToBooleanFilterConverter.cs" />
-    <Compile Include="Views\Touchpad\TouchpadContact.cs" />
-    <Compile Include="Views\Touchpad\TouchpadHelper.cs" />
-    <Compile Include="Views\Touchpad\TouchpadTracker.cs" />
+    <Compile Include="Views\Input\Touchpad\TouchpadContact.cs" />
+    <Compile Include="Views\Input\Touchpad\TouchpadHelper.cs" />
+    <Compile Include="Views\Input\Touchpad\TouchpadTracker.cs" />
+    <Compile Include="Views\Input\MouseAddition.cs" />
+    <Compile Include="Views\DevSection.xaml.cs">
+      <DependentUpon>DevSection.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MenuWindow.xaml.cs">
       <DependentUpon>MenuWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ProbeSection.xaml.cs">
-      <DependentUpon>ProbeSection.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\WindowPainter.cs" />
   </ItemGroup>
@@ -172,6 +174,10 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.ar.resx">
+      <DependentUpon>Resources.resx</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.ca.resx">
       <DependentUpon>Resources.resx</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
@@ -207,6 +213,10 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.pt-BR.resx">
+      <DependentUpon>Resources.resx</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.ro.resx">
       <DependentUpon>Resources.resx</DependentUpon>
       <SubType>Designer</SubType>
@@ -216,6 +226,10 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.tr-TR.resx">
+      <DependentUpon>Resources.resx</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.uk-UA.resx">
       <DependentUpon>Resources.resx</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
@@ -229,9 +243,14 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Icons\TrayIcon.ico" />
+    <Resource Include="Resources\Icons\DarkTrayIcon.ico" />
+    <Resource Include="Resources\Icons\LightTrayIcon.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Views\DevSection.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -241,10 +260,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\MenuWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\ProbeSection.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -259,7 +274,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf">
-      <Version>1.1.37</Version>
+      <Version>1.1.39</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -5,63 +5,62 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Win32;
 
+using Monitorian.Core.Models.Monitor;
+
 namespace Monitorian.Core.Models.Watcher
 {
 	internal class PowerWatcher : IDisposable
 	{
-		private Action<PowerModeChangedCountEventArgs> _onPowerModeChanged;
-		private Action<PowerSettingChangedEventArgs> _onPowerSettingChanged;
+		private Action<ICountEventArgs> _onPowerChanged;
 
 		private void RaisePowerModeChanged(PowerModes mode, int count) =>
-			_onPowerModeChanged?.Invoke(new PowerModeChangedCountEventArgs(mode, count));
+			_onPowerChanged?.Invoke(new PowerModeChangedCountEventArgs(mode, count));
+
+		private void RaiseDisplayStateChanged(DisplayStates state, int count) =>
+			_onPowerChanged?.Invoke(new DisplayStateChangedCountEventArgs(state, count));
 
 		private SystemEventsComplement _complement;
 
-		private class PowerModeWatcher : TimerWatcher
+		private class PowerDataWatcher<T> : TimerWatcher
 		{
-			private readonly PowerWatcher _instance;
+			private readonly Action<T, int> _action;
 
-			public PowerModeWatcher(PowerWatcher instance, params int[] intervals) : base(intervals) => this._instance = instance;
+			public PowerDataWatcher(Action<T, int> action, params int[] intervals) : base(intervals) => this._action = action;
 
-			public PowerModes Mode { get; private set; }
+			public T Data { get; private set; }
 
-			public void TimerStart(PowerModeChangedEventArgs e)
+			public void TimerStart(T data)
 			{
-				this.Mode = e.Mode;
+				this.Data = data;
 				base.TimerStart();
 			}
 
-			protected override void TimerTick() => _instance.RaisePowerModeChanged(Mode, Count);
+			protected override void TimerTick() => _action.Invoke(Data, Count);
 		}
 
-		private readonly PowerModeWatcher _resumeWatcher;
-		private readonly PowerModeWatcher _statusWatcher;
+		private readonly PowerDataWatcher<PowerModes> _resumeWatcher;
+		private readonly PowerDataWatcher<PowerModes> _statusWatcher;
+		private readonly PowerDataWatcher<DisplayStates> _stateWatcher;
 
 		public PowerWatcher()
 		{
 			// Conform invocation timings so that the action would be executed efficiently when
 			// multiple and different events are fired almost simultaneously.
-			_resumeWatcher = new PowerModeWatcher(this, 5, 5, 10, 10, 30);
-			_statusWatcher = new PowerModeWatcher(this, 1, 4);
+			_resumeWatcher = new PowerDataWatcher<PowerModes>(this.RaisePowerModeChanged, 5, 5, 10, 10, 30);
+			_statusWatcher = new PowerDataWatcher<PowerModes>(this.RaisePowerModeChanged, 1, 4);
+			_stateWatcher = new PowerDataWatcher<DisplayStates>(this.RaiseDisplayStateChanged, 5, 5);
 		}
 
-		public void Subscribe(Action<PowerModeChangedCountEventArgs> onPowerModeChanged)
+		public void Subscribe(Action<ICountEventArgs> onPowerChanged)
 		{
-			this._onPowerModeChanged = onPowerModeChanged ?? throw new ArgumentNullException(nameof(onPowerModeChanged));
+			this._onPowerChanged = onPowerChanged ?? throw new ArgumentNullException(nameof(onPowerChanged));
 			SystemEvents.PowerModeChanged += OnPowerModeChanged;
-		}
 
-		public void Subscribe(Action<PowerModeChangedCountEventArgs> onPowerModeChanged, (IReadOnlyCollection<Guid> guids, Action<PowerSettingChangedEventArgs> action) onPowerSettingChanged)
-		{
-			Subscribe(onPowerModeChanged);
+			var (powerSettingGuids, powerSettingChanged) = PowerManagement.GetOnPowerSettingChanged();
 
-			if (onPowerSettingChanged.action is null)
-				return;
-
-			this._onPowerSettingChanged = onPowerSettingChanged.action;
 			_complement = new SystemEventsComplement();
-			_complement.PowerSettingChanged += (sender, e) => this._onPowerSettingChanged.Invoke(e);
-			_complement.RegisterPowerSettingEvent(onPowerSettingChanged.guids);
+			_complement.PowerSettingChanged += (_, e) => OnDisplayStateChanged(powerSettingChanged.Invoke(e));
+			_complement.RegisterPowerSettingEvent(powerSettingGuids);
 		}
 
 		private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
@@ -69,17 +68,33 @@ namespace Monitorian.Core.Models.Watcher
 			switch (e.Mode)
 			{
 				case PowerModes.Resume:
-					RaisePowerModeChanged(PowerModes.Resume, 0);
-					_resumeWatcher.TimerStart(e);
+					RaisePowerModeChanged(e.Mode, 0);
+					_resumeWatcher.TimerStart(e.Mode);
 					break;
 				case PowerModes.Suspend:
 					_resumeWatcher.TimerStop();
-					RaisePowerModeChanged(PowerModes.Suspend, 0);
+					RaisePowerModeChanged(e.Mode, 0);
 					break;
 				default:
-					_statusWatcher.TimerStart(e);
+					_statusWatcher.TimerStart(e.Mode);
 					break;
 			}
+		}
+
+		private void OnDisplayStateChanged(DisplayStates state)
+		{
+			switch (state)
+			{
+				case DisplayStates.On:
+				case DisplayStates.Dimmed:
+					RaiseDisplayStateChanged(state, 0);
+					_stateWatcher.TimerStart(state);
+					break;
+				case DisplayStates.Off:
+					_stateWatcher.TimerStop();
+					RaiseDisplayStateChanged(state, 0);
+					break;
+			};
 		}
 
 		#region IDisposable
@@ -102,6 +117,9 @@ namespace Monitorian.Core.Models.Watcher
 				// Free any other managed objects here.
 				SystemEvents.PowerModeChanged -= OnPowerModeChanged;
 				_complement?.UnregisterPowerSettingEvent();
+				_resumeWatcher.Dispose();
+				_statusWatcher.Dispose();
+				_stateWatcher.Dispose();
 			}
 
 			// Free any unmanaged objects here.
@@ -114,6 +132,12 @@ namespace Monitorian.Core.Models.Watcher
 	public class PowerModeChangedCountEventArgs : CountEventArgs<PowerModes>
 	{
 		public PowerModeChangedCountEventArgs(PowerModes mode, int count) : base(mode, count)
+		{ }
+	}
+
+	public class DisplayStateChangedCountEventArgs : CountEventArgs<DisplayStates>
+	{
+		public DisplayStateChangedCountEventArgs(DisplayStates state, int count) : base(state, count)
 		{ }
 	}
 }

@@ -14,7 +14,7 @@
 		Background="{DynamicResource App.Background.Plain}">
 	<Window.Resources>
 		<sys:Double x:Key="SliderHeight">52</sys:Double>
-		<sys:Double x:Key="ThumbHeight">44</sys:Double>
+		<sys:Double x:Key="ThumbHeight">40</sys:Double>
 		<sys:Double x:Key="BracketHeight">8</sys:Double>
 
 		<Style x:Key="ToolTipStyle" TargetType="{x:Type ToolTip}">
@@ -39,9 +39,6 @@
 		<Style TargetType="{x:Type ToolTip}" BasedOn="{StaticResource ToolTipStyle}"/>
 
 		<!-- Slider -->
-		<Color x:Key="Slider.Background.Main.StaticColor">#FF2982CC</Color>
-		<Color x:Key="Slider.Background.Main.MouseOverColor">#FF5CA4DE</Color>
-		<Color x:Key="Slider.Background.Main.PressedColor">#FF5CA4DE</Color>
 		<Color x:Key="Slider.Background.Range.StaticColor">#FFFFA500</Color>
 		<Color x:Key="Slider.Background.Range.MouseOverColor">#FFFFC400</Color>
 		<Color x:Key="Slider.Background.Range.PressedColor">#FFFFC400</Color>
@@ -51,9 +48,16 @@
 		<Color x:Key="Slider.Background.DisabledColor">#FFF0F0F0</Color>
 		<Color x:Key="Slider.Background.VacantColor">#FF999999</Color>
 
-		<SolidColorBrush x:Key="Slider.Background.Main.Static" Color="{StaticResource Slider.Background.Main.StaticColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Main.Static" Color="{DynamicResource App.Background.Accent.StaticColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Main.MouseOver" Color="{DynamicResource App.Background.Accent.MouseOverColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Main.Pressed" Color="{DynamicResource App.Background.Accent.PressedColor}"/>
 		<SolidColorBrush x:Key="Slider.Background.Range.Static" Color="{StaticResource Slider.Background.Range.StaticColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Range.MouseOver" Color="{StaticResource Slider.Background.Range.MouseOverColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Range.Pressed" Color="{StaticResource Slider.Background.Range.PressedColor}"/>
 		<SolidColorBrush x:Key="Slider.Background.Contrast.Static" Color="{StaticResource Slider.Background.Contrast.StaticColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Contrast.MouseOver" Color="{StaticResource Slider.Background.Contrast.MouseOverColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Contrast.Pressed" Color="{StaticResource Slider.Background.Contrast.PressedColor}"/>
+		<SolidColorBrush x:Key="Slider.Background.Disabled" Color="{StaticResource Slider.Background.DisabledColor}"/>
 		<SolidColorBrush x:Key="Slider.Background.Vacant" Color="{StaticResource Slider.Background.VacantColor}"/>
 		<SolidColorBrush x:Key="Slider.Background.Bracket" Color="{DynamicResource App.TargetColor}"/>
 		<SolidColorBrush x:Key="Slider.Background.Overlay" Color="{DynamicResource App.OverlayColor}"/>
@@ -78,59 +82,69 @@
 								<Setter Property="OverridesDefaultStyle" Value="True"/>
 								<Setter Property="Focusable" Value="False"/>
 								<Setter Property="Background" Value="Transparent"/>
-								<Setter Property="Template">
-									<Setter.Value>
-										<ControlTemplate TargetType="{x:Type Thumb}">
-											<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-												<Rectangle Height="{DynamicResource BracketHeight}"
-														   VerticalAlignment="Top"
-														   Fill="{TemplateBinding Background}"/>
-												<Rectangle Height="{DynamicResource BracketHeight}"
-														   VerticalAlignment="Bottom"
-														   Fill="{TemplateBinding Background}"/>
-
-												<Rectangle x:Name="grip"
-														   Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
-														   Margin="2">
-													<Rectangle.Fill>
-														<SolidColorBrush Color="{StaticResource Slider.Background.Main.StaticColor}"/>
-													</Rectangle.Fill>
-												</Rectangle>
-
-												<VisualStateManager.VisualStateGroups>
-													<VisualStateGroup x:Name="CommonStates">
-														<VisualState x:Name="Normal"/>
-														<VisualState x:Name="MouseOver">
-															<Storyboard>
-																<ColorAnimation	Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.Main.MouseOverColor}"/>
-															</Storyboard>
-														</VisualState>
-														<VisualState x:Name="Pressed">
-															<Storyboard>
-																<ColorAnimation	Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.Main.PressedColor}"/>
-															</Storyboard>
-														</VisualState>
-														<VisualState x:Name="Disabled">
-															<Storyboard>
-																<ColorAnimation Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.DisabledColor}"/>
-															</Storyboard>
-														</VisualState>
-													</VisualStateGroup>
-												</VisualStateManager.VisualStateGroups>
-											</Grid>
-										</ControlTemplate>
-									</Setter.Value>
-								</Setter>
+								<Setter Property="Foreground" Value="{StaticResource Slider.Background.Main.Static}"/>
+								<Style.Triggers>
+									<Trigger Property="IsMouseOver" Value="True">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Main.MouseOver}"/>
+									</Trigger>
+									<Trigger Property="IsDragging" Value="True">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Main.Pressed}"/>
+									</Trigger>
+									<Trigger Property="IsEnabled" Value="False">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Disabled}"/>
+									</Trigger>
+								</Style.Triggers>
 							</Style>
+
+							<ControlTemplate x:Key="SliderThumbHorizontalLarge" TargetType="{x:Type Thumb}">
+								<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+									<Rectangle Height="{DynamicResource BracketHeight}"
+											   VerticalAlignment="Top"
+											   Fill="{TemplateBinding Background}"/>
+									<Rectangle Height="{DynamicResource BracketHeight}"
+											   VerticalAlignment="Bottom"
+											   Fill="{TemplateBinding Background}"/>
+
+									<Rectangle Width="11" Height="{DynamicResource ThumbHeight}"
+											   Margin="2"
+											   Fill="{TemplateBinding Foreground}"/>
+								</Grid>
+							</ControlTemplate>
+
+							<ControlTemplate x:Key="SliderThumbHorizontalSmall" TargetType="{x:Type Thumb}">
+								<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+									<Path Width="22" Height="22"
+										  Fill="{TemplateBinding Background}">
+										<Path.Data>
+											<CombinedGeometry GeometryCombineMode="Exclude">
+												<CombinedGeometry.Geometry1>
+													<EllipseGeometry Center="11,11" RadiusX="11" RadiusY="11"/>
+												</CombinedGeometry.Geometry1>
+												<CombinedGeometry.Geometry2>
+													<PathGeometry Figures="M 0,0 L 22,22 22,0 0,22 Z"/>
+												</CombinedGeometry.Geometry2>
+											</CombinedGeometry>
+										</Path.Data>
+									</Path>
+
+									<Ellipse Width="20" Height="20"
+											 StrokeThickness="2.5"
+											 Stroke="Transparent"
+											 Fill="{TemplateBinding Foreground}"/>
+								</Grid>
+							</ControlTemplate>
+
+							<ControlTemplate x:Key="ShadowThumbLarge" TargetType="{x:Type ContentControl}">
+								<Rectangle Width="8"
+										   controls:FrameworkElementMargin.Vertical="{DynamicResource BracketHeight}"
+										   Fill="{TemplateBinding Foreground}"/>
+							</ControlTemplate>
+
+							<ControlTemplate x:Key="ShadowThumbSmall" TargetType="{x:Type ContentControl}">
+								<Ellipse Width="{Binding RelativeSource={RelativeSource Self}, Path=ActualHeight}"
+										 controls:FrameworkElementMargin.Vertical="{DynamicResource BracketHeight}"
+										 Fill="{TemplateBinding Foreground}"/>
+							</ControlTemplate>
 						</ControlTemplate.Resources>
 
 						<Border x:Name="border"
@@ -144,12 +158,11 @@
 										<ColumnDefinition x:Name="PART_ShadowRight" Width="*"/>
 									</Grid.ColumnDefinitions>
 
-									<Rectangle Grid.Column="1"
-											   x:Name="PART_ShadowThumb"
-											   Width="8"
-											   controls:FrameworkElementMargin.Vertical="{DynamicResource BracketHeight}"
-											   Fill="{StaticResource Slider.Background.Vacant}"
-											   IsHitTestVisible="False"/>
+									<ContentControl Grid.Column="1"
+													x:Name="PART_ShadowThumb"
+													Template="{StaticResource ShadowThumbLarge}"
+													Foreground="{StaticResource Slider.Background.Vacant}"
+													IsHitTestVisible="False"/>
 								</Grid>
 
 								<Rectangle Height="3" Margin="7.5,0" VerticalAlignment="Center"
@@ -158,7 +171,7 @@
 										   Height="3" Margin="7.5,0" HorizontalAlignment="Left" VerticalAlignment="Center"
 										   Fill="{StaticResource Slider.Background.Main.Static}"/>
 
-								<Canvas VerticalAlignment="center"
+								<Canvas VerticalAlignment="Center"
 										IsHitTestVisible="False">
 									<Rectangle x:Name="PART_SelectionRange"
 											   Height="3"
@@ -196,19 +209,23 @@
 									</Track.IncreaseRepeatButton>
 									<Track.Thumb>
 										<Thumb x:Name="thumb"
-											   Width="15" Height="{DynamicResource ThumbHeight}"
-											   Style="{StaticResource SliderThumbHorizontal}"/>
+											   Style="{StaticResource SliderThumbHorizontal}"
+											   Template="{StaticResource SliderThumbHorizontalLarge}"/>
 									</Track.Thumb>
 								</Track>
 							</Grid>
 						</Border>
 						<ControlTemplate.Triggers>
-							<Trigger Property="IsSelectionRangeEnabled" Value="true">
+							<Trigger Property="IsSelectionRangeEnabled" Value="True">
 								<Setter Property="Visibility" TargetName="PART_SelectionRange" Value="Visible"/>
 							</Trigger>
 							<Trigger Property="IsUnison" Value="True">
 								<Setter Property="Background" TargetName="thumb" Value="{StaticResource Slider.Background.Bracket}"/>
 							</Trigger>
+							<DataTrigger Binding="{Binding Settings.UsesLargeElements}" Value="False">
+								<Setter TargetName="thumb" Property="Template" Value="{StaticResource SliderThumbHorizontalSmall}"/>
+								<Setter TargetName="PART_ShadowThumb" Property="Template" Value="{StaticResource ShadowThumbSmall}"/>
+							</DataTrigger>
 						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
@@ -224,52 +241,36 @@
 										<Setter Property="OverridesDefaultStyle" Value="True"/>
 										<Setter Property="Focusable" Value="False"/>
 										<Setter Property="Background" Value="Transparent"/>
-										<Setter Property="Template">
-											<Setter.Value>
-												<ControlTemplate TargetType="{x:Type Thumb}">
-													<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-														<Rectangle x:Name="grip"
-																   Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
-																   Margin="2">
-															<Rectangle.Fill>
-																<SolidColorBrush Color="{StaticResource Slider.Background.Range.StaticColor}"/>
-															</Rectangle.Fill>
-														</Rectangle>
-
-														<VisualStateManager.VisualStateGroups>
-															<VisualStateGroup x:Name="CommonStates">
-																<VisualState x:Name="Normal"/>
-																<VisualState x:Name="MouseOver">
-																	<Storyboard>
-																		<ColorAnimation	Storyboard.TargetName="grip"
-																						Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																						Duration="0:0:0.1"
-																						To="{StaticResource Slider.Background.Range.MouseOverColor}"/>
-																	</Storyboard>
-																</VisualState>
-																<VisualState x:Name="Pressed">
-																	<Storyboard>
-																		<ColorAnimation	Storyboard.TargetName="grip"
-																						Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																						Duration="0:0:0.1"
-																						To="{StaticResource Slider.Background.Range.PressedColor}"/>
-																	</Storyboard>
-																</VisualState>
-																<VisualState x:Name="Disabled">
-																	<Storyboard>
-																		<ColorAnimation Storyboard.TargetName="grip"
-																						Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																						Duration="0:0:0.1"
-																						To="{StaticResource Slider.Background.DisabledColor}"/>
-																	</Storyboard>
-																</VisualState>
-															</VisualStateGroup>
-														</VisualStateManager.VisualStateGroups>
-													</Grid>
-												</ControlTemplate>
-											</Setter.Value>
-										</Setter>
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Range.Static}"/>
+										<Style.Triggers>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter Property="Foreground" Value="{StaticResource Slider.Background.Range.MouseOver}"/>
+											</Trigger>
+											<Trigger Property="IsDragging" Value="True">
+												<Setter Property="Foreground" Value="{StaticResource Slider.Background.Range.Pressed}"/>
+											</Trigger>
+											<Trigger Property="IsEnabled" Value="False">
+												<Setter Property="Foreground" Value="{StaticResource Slider.Background.Disabled}"/>
+											</Trigger>
+										</Style.Triggers>
 									</Style>
+
+									<ControlTemplate x:Key="SliderThumbHorizontalLarge" TargetType="{x:Type Thumb}">
+										<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+											<Rectangle Width="9" Height="{DynamicResource ThumbHeight}"
+													   Margin="2"
+													   Fill="{TemplateBinding Foreground}"/>
+										</Grid>
+									</ControlTemplate>
+
+									<ControlTemplate x:Key="SliderThumbHorizontalSmall" TargetType="{x:Type Thumb}">
+										<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+											<Ellipse Width="18" Height="18"
+													 StrokeThickness="2.5"
+													 Stroke="Transparent"
+													 Fill="{TemplateBinding Foreground}"/>
+										</Grid>
+									</ControlTemplate>
 								</ControlTemplate.Resources>
 
 								<Border x:Name="border"
@@ -291,25 +292,33 @@
 											   Visibility="Hidden"
 											   IsHitTestVisible="False">
 											<Track.Thumb>
-												<Thumb Width="15" Height="4"
-													   Style="{x:Null}"/>
+												<Thumb Style="{x:Null}"/>
 											</Track.Thumb>
 										</Track>
 
 										<Track x:Name="PART_StartTrack">
 											<Track.Thumb>
-												<Thumb Width="13" Height="{DynamicResource ThumbHeight}"
-													   Style="{StaticResource SliderThumbHorizontal}"/>
+												<Thumb x:Name="startThumb"
+													   Style="{StaticResource SliderThumbHorizontal}"
+													   Template="{StaticResource SliderThumbHorizontalLarge}"/>
 											</Track.Thumb>
 										</Track>
 										<Track x:Name="PART_EndTrack">
 											<Track.Thumb>
-												<Thumb Width="13" Height="{DynamicResource ThumbHeight}"
-													   Style="{StaticResource SliderThumbHorizontal}"/>
+												<Thumb x:Name="endThumb"
+													   Style="{StaticResource SliderThumbHorizontal}"
+													   Template="{StaticResource SliderThumbHorizontalLarge}"/>
 											</Track.Thumb>
 										</Track>
 									</Grid>
 								</Border>
+
+								<ControlTemplate.Triggers>
+									<DataTrigger Binding="{Binding Settings.UsesLargeElements}" Value="False">
+										<Setter TargetName="startThumb" Property="Template" Value="{StaticResource SliderThumbHorizontalSmall}"/>
+										<Setter TargetName="endThumb" Property="Template" Value="{StaticResource SliderThumbHorizontalSmall}"/>
+									</DataTrigger>
+								</ControlTemplate.Triggers>
 							</ControlTemplate>
 						</Setter.Value>
 					</Setter>
@@ -337,52 +346,36 @@
 								<Setter Property="OverridesDefaultStyle" Value="True"/>
 								<Setter Property="Focusable" Value="False"/>
 								<Setter Property="Background" Value="Transparent"/>
-								<Setter Property="Template">
-									<Setter.Value>
-										<ControlTemplate TargetType="{x:Type Thumb}">
-											<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-												<Rectangle x:Name="grip"
-														   Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"
-														   Margin="2">
-													<Rectangle.Fill>
-														<SolidColorBrush Color="{StaticResource Slider.Background.Contrast.StaticColor}"/>
-													</Rectangle.Fill>
-												</Rectangle>
-
-												<VisualStateManager.VisualStateGroups>
-													<VisualStateGroup x:Name="CommonStates">
-														<VisualState x:Name="Normal"/>
-														<VisualState x:Name="MouseOver">
-															<Storyboard>
-																<ColorAnimation	Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.Contrast.MouseOverColor}"/>
-															</Storyboard>
-														</VisualState>
-														<VisualState x:Name="Pressed">
-															<Storyboard>
-																<ColorAnimation	Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.Contrast.PressedColor}"/>
-															</Storyboard>
-														</VisualState>
-														<VisualState x:Name="Disabled">
-															<Storyboard>
-																<ColorAnimation Storyboard.TargetName="grip"
-																				Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)"
-																				Duration="0:0:0.1"
-																				To="{StaticResource Slider.Background.DisabledColor}"/>
-															</Storyboard>
-														</VisualState>
-													</VisualStateGroup>
-												</VisualStateManager.VisualStateGroups>
-											</Grid>
-										</ControlTemplate>
-									</Setter.Value>
-								</Setter>
+								<Setter Property="Foreground" Value="{StaticResource Slider.Background.Contrast.Static}"/>
+								<Style.Triggers>
+									<Trigger Property="IsMouseOver" Value="True">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Contrast.MouseOver}"/>
+									</Trigger>
+									<Trigger Property="IsDragging" Value="True">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Contrast.Pressed}"/>
+									</Trigger>
+									<Trigger Property="IsEnabled" Value="False">
+										<Setter Property="Foreground" Value="{StaticResource Slider.Background.Disabled}"/>
+									</Trigger>
+								</Style.Triggers>
 							</Style>
+
+							<ControlTemplate x:Key="SliderThumbHorizontalLarge" TargetType="{x:Type Thumb}">
+								<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+									<Rectangle Width="11" Height="{DynamicResource ThumbHeight}"
+											   Margin="2"
+											   Fill="{TemplateBinding Foreground}"/>
+								</Grid>
+							</ControlTemplate>
+
+							<ControlTemplate x:Key="SliderThumbHorizontalSmall" TargetType="{x:Type Thumb}">
+								<Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+									<Ellipse Width="20" Height="20"
+											 StrokeThickness="2.5"
+											 Stroke="Transparent"
+											 Fill="{TemplateBinding Foreground}"/>
+								</Grid>
+							</ControlTemplate>
 						</ControlTemplate.Resources>
 
 						<Border x:Name="border"
@@ -408,12 +401,18 @@
 									</Track.IncreaseRepeatButton>
 									<Track.Thumb>
 										<Thumb x:Name="thumb"
-											   Width="15" Height="{DynamicResource ThumbHeight}"
-											   Style="{StaticResource SliderThumbHorizontal}"/>
+											   Style="{StaticResource SliderThumbHorizontal}"
+											   Template="{StaticResource SliderThumbHorizontalLarge}"/>
 									</Track.Thumb>
 								</Track>
 							</Grid>
 						</Border>
+
+						<ControlTemplate.Triggers>
+							<DataTrigger Binding="{Binding Settings.UsesLargeElements}" Value="False">
+								<Setter TargetName="thumb" Property="Template" Value="{StaticResource SliderThumbHorizontalSmall}"/>
+							</DataTrigger>
+						</ControlTemplate.Triggers>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
@@ -421,6 +420,7 @@
 
 		<!-- Pulse Label -->
 		<Style x:Key="PulseLabelStyle" TargetType="{x:Type controls:PulseLabel}">
+			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="Template">
 				<Setter.Value>
 					<ControlTemplate TargetType="{x:Type controls:PulseLabel}">
@@ -576,16 +576,17 @@
 
 		<!-- Number Label -->
 		<Style x:Key="NumberLabelStyle" TargetType="{x:Type Label}">
+			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Padding" Value="0"/>
 			<Setter Property="HorizontalContentAlignment" Value="Right"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Foreground" Value="{StaticResource App.Foreground}"/>
+			<Setter Property="FontFamily" Value="Segoe UI"/>
 		</Style>
 	</Window.Resources>
 
 	<Grid Width="340">
 		<!-- Pulse -->
-		<controls:PulseLabel Height="16" Margin="8,4"
+		<controls:PulseLabel Margin="8,4"
 							 Style="{StaticResource PulseLabelStyle}"
 							 Content="{Binding Source={x:Static models:ProductInfo.Title}, Mode=OneTime}"
 							 IsPulsing="{Binding IsScanning, Mode=OneWay}"
@@ -625,7 +626,7 @@
 							<controls:SwitchTextBox Grid.Column="0"
 													Height="22" Margin="8,5,0,5" HorizontalAlignment="Left" VerticalAlignment="Center"
 													Style="{StaticResource NameTextBoxStyle}"
-													TextWrapping="Wrap" MaxLength="96" FontSize="14"
+													TextWrapping="Wrap" MaxLength="96"
 													Text="{Binding Name, Mode=TwoWay}"/>
 
 							<StackPanel Grid.Column="1"
@@ -633,7 +634,7 @@
 										Orientation="Horizontal">
 								<!-- Unison -->
 								<controls:IconButton Style="{StaticResource UnisonButtonStyle}"
-													 ToolTip="{x:Static properties:Resources.MoveUnison}"
+													 ToolTip="{x:Static properties:Resources.ChangeUnison}"
 													 Visibility="{Binding Settings.EnablesUnison, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}"
 													 IsChecked="{Binding IsUnison, Mode=TwoWay}"/>
 
@@ -662,10 +663,11 @@
 								<ColumnDefinition Width="Auto"/>
 								<ColumnDefinition Width="Auto"/>
 								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
 							</Grid.ColumnDefinitions>
 
 							<Rectangle Grid.Column="0"
-									   Fill="{StaticResource App.Background.Accent}"
+									   Fill="{StaticResource Slider.Background.Main.Static}"
 									   Visibility="{Binding IsSelectedByKey, Converter={StaticResource BooleanToVisibilityConverterKey}}"/>
 
 							<!-- Brightness -->
@@ -686,59 +688,61 @@
 								<i:Interaction.Behaviors>
 									<behaviors:ItemSliderBehavior IsSelected="{Binding IsSelected, Mode=OneWay}"
 																  IsByKey="{Binding IsByKey, Mode=TwoWay}"/>
+									<behaviors:MouseHorizontalWheelBehavior/>
 								</i:Interaction.Behaviors>
 							</controls:CompoundSlider>
 
-							<Grid Grid.Column="2"
-								  Visibility="{Binding Settings.ShowsNumber, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}">
-								<Label Width="26" Margin="0,0,4,0"
-									   Style="{StaticResource NumberLabelStyle}"
-									   FontSize="16"
-									   Content="{Binding Brightness, Mode=OneWay}"
-									   Visibility="{Binding IsRangeChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityTurnConverterKey}, ConverterParameter=True}">
-									<i:Interaction.Triggers>
-										<i:EventTrigger EventName="MouseDown">
-											<i:CallMethodAction TargetObject="{Binding}" MethodName="IncrementBrightness"/>
-										</i:EventTrigger>
-									</i:Interaction.Triggers>
-								</Label>
+							<Label Grid.Column="2"
+								   Width="26" Margin="0,0,4,0"
+								   Style="{StaticResource NumberLabelStyle}"
+								   FontSize="16"
+								   Content="{Binding Brightness, Mode=OneWay}"
+								   Visibility="{Binding IsRangeChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityTurnConverterKey}, ConverterParameter=True}">
+								<i:Interaction.Triggers>
+									<i:EventTrigger EventName="MouseDown">
+										<i:CallMethodAction TargetObject="{Binding}" MethodName="IncrementBrightness"/>
+									</i:EventTrigger>
+								</i:Interaction.Triggers>
+							</Label>
 
-								<Label Width="48" Margin="0,0,4,0"
-									   Style="{StaticResource NumberLabelStyle}"
-									   FontSize="15"
-									   Visibility="{Binding IsRangeChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}">
-									<TextBlock>
-										<Run Text="{Binding RangeLowest, Mode=OneWay, StringFormat={}{0}-}"/><Run Text="{Binding RangeHighest, Mode=OneWay}"/>
-									</TextBlock>
-								</Label>
-							</Grid>
+							<Label Grid.Column="3"
+								   Width="48" Margin="0,0,4,0"
+								   Style="{StaticResource NumberLabelStyle}"
+								   FontSize="15"
+								   Visibility="{Binding IsRangeChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}">
+								<TextBlock>
+									<Run Text="{Binding RangeLowest, Mode=OneWay}"/><Run Text="-"/><Run Text="{Binding RangeHighest, Mode=OneWay}"/>
+								</TextBlock>
+							</Label>
 
 							<!-- Contrast -->
-							<controls:EnhancedSlider Grid.Column="3"
+							<controls:EnhancedSlider Grid.Column="4"
 													 Width="100" Margin="8,0,4,0" VerticalAlignment="Center"
 													 Style="{StaticResource SubSliderHorizontal}"
 													 Minimum="0" Maximum="100"
 													 Value="{Binding Contrast, Mode=TwoWay, Delay=50}"
 													 DefersUpdateSource="{Binding Settings.DefersChange, Mode=OneWay}"
-													 Visibility="{Binding IsContrastChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}"/>
+													 Visibility="{Binding IsContrastChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}">
+								<i:Interaction.Behaviors>
+									<behaviors:MouseHorizontalWheelBehavior/>
+								</i:Interaction.Behaviors>
+							</controls:EnhancedSlider>
 
-							<Grid Grid.Column="4"
-								  Visibility="{Binding Settings.ShowsNumber, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}">
-								<Label Width="26" Margin="0,0,4,0"
-									   Style="{StaticResource NumberLabelStyle}"
-									   FontSize="16"
-									   Content="{Binding Contrast, Mode=OneWay}"
-									   Visibility="{Binding IsContrastChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}"/>
-							</Grid>
+							<Label Grid.Column="5"
+								   Width="26" Margin="0,0,4,0"
+								   Style="{StaticResource NumberLabelStyle}"
+								   FontSize="16"
+								   Content="{Binding Contrast, Mode=OneWay}"
+								   Visibility="{Binding IsContrastChanging, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverterKey}}"/>
 						</Grid>
 
 						<!-- Message -->
 						<Grid Grid.Row="2"
-							  Visibility="{Binding Message, Mode=OneWay, Converter={StaticResource StringToVisibilityConverterKey}}">
+							  Visibility="{Binding Message, Mode=OneWay, Converter={StaticResource ObjectToVisibilityConverterKey}}">
 							<Border Margin="6,6,6,0"
 									Padding="3"
 									BorderBrush="{StaticResource App.Foreground.Invalid}" BorderThickness="1">
-								<TextBlock Foreground="{StaticResource App.Foreground.Invalid}"
+								<TextBlock Style="{StaticResource InvalidTextStyle}"
 										   TextWrapping="Wrap"
 										   Text="{Binding Message, Mode=OneWay}"/>
 							</Border>

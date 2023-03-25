@@ -21,41 +21,6 @@ namespace ScreenFrame
 		#region Win32
 
 		[DllImport("User32.dll", SetLastError = true)]
-		private static extern IntPtr FindWindowEx(
-			IntPtr hwndParent,
-			IntPtr hwndChildAfter,
-			string lpszClass,
-			string lpszWindow);
-
-		[DllImport("User32.dll")]
-		private static extern IntPtr MonitorFromPoint(
-			POINT pt,
-			MONITOR_DEFAULTTO dwFlags);
-
-		[DllImport("User32.dll")]
-		private static extern IntPtr MonitorFromWindow(
-			IntPtr hwnd,
-			MONITOR_DEFAULTTO dwFlags);
-
-		private enum MONITOR_DEFAULTTO : uint
-		{
-			/// <summary>
-			/// If no display monitor intersects, returns null.
-			/// </summary>
-			MONITOR_DEFAULTTONULL = 0x00000000,
-
-			/// <summary>
-			/// If no display monitor intersects, returns a handle to the primary display monitor.
-			/// </summary>
-			MONITOR_DEFAULTTOPRIMARY = 0x00000001,
-
-			/// <summary>
-			/// If no display monitor intersects, returns a handle to the display monitor that is nearest to the rectangle.
-			/// </summary>
-			MONITOR_DEFAULTTONEAREST = 0x00000002,
-		}
-
-		[DllImport("User32.dll", SetLastError = true)]
 		private static extern IntPtr GetDC(IntPtr hWnd);
 
 		[DllImport("User32.dll", SetLastError = true)]
@@ -71,6 +36,9 @@ namespace ScreenFrame
 
 		private const int LOGPIXELSX = 88;
 		private const int LOGPIXELSY = 90;
+
+		[DllImport("User32.dll")]
+		private static extern uint GetDpiForSystem();
 
 		[DllImport("Shcore.dll")]
 		private static extern int GetDpiForMonitor(
@@ -102,8 +70,6 @@ namespace ScreenFrame
 			MDT_Default = MDT_Effective_DPI
 		}
 
-		private const int S_OK = 0x0;
-
 		#endregion
 
 		#region DPI
@@ -117,6 +83,14 @@ namespace ScreenFrame
 
 		private static DpiScale GetSystemDpi()
 		{
+			if (OsVersion.Is10Build14393OrGreater)
+			{
+				double pixelsPerInch = GetDpiForSystem();
+				return new DpiScale(
+					pixelsPerInch / DefaultPixelsPerInch,
+					pixelsPerInch / DefaultPixelsPerInch);
+			}
+
 			var handle = IntPtr.Zero;
 			try
 			{
@@ -257,11 +231,11 @@ namespace ScreenFrame
 		#region VisualTree
 
 		/// <summary>
-		/// Attempts to get the first ancestor visual of a specified visual.
+		/// Attempts to get the first ancestor object of a specified object.
 		/// </summary>
-		/// <typeparam name="T">Type of ancestor visual</typeparam>
-		/// <param name="reference">Descendant visual</param>
-		/// <param name="ancestor">Ancestor visual</param>
+		/// <typeparam name="T">Type of ancestor dependency object</typeparam>
+		/// <param name="reference">Descendant dependency object</param>
+		/// <param name="ancestor">Ancestor dependency object</param>
 		/// <returns>True if successfully gets</returns>
 		public static bool TryGetAncestor<T>(DependencyObject reference, out T ancestor) where T : DependencyObject
 		{
@@ -282,11 +256,11 @@ namespace ScreenFrame
 		}
 
 		/// <summary>
-		/// Attempts to get the first descendant visual of a specified visual.
+		/// Attempts to get the first descendant object of a specified object.
 		/// </summary>
-		/// <typeparam name="T">Type of descendant visual</typeparam>
-		/// <param name="reference">Ancestor visual</param>
-		/// <param name="descendant">Descendant visual</param>
+		/// <typeparam name="T">Type of descendant dependency object</typeparam>
+		/// <param name="reference">Ancestor dependency object</param>
+		/// <param name="descendant">Descendant dependency object</param>
 		/// <returns>True if successfully gets</returns>
 		public static bool TryGetDescendant<T>(DependencyObject reference, out T descendant) where T : DependencyObject
 		{
@@ -295,7 +269,7 @@ namespace ScreenFrame
 
 			while (parent is not null)
 			{
-				var count = VisualTreeHelper.GetChildrenCount(parent);
+				int count = VisualTreeHelper.GetChildrenCount(parent);
 				for (int i = 0; i < count; i++)
 				{
 					var child = VisualTreeHelper.GetChild(parent, i);

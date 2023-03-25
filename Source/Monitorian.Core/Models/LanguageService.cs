@@ -15,11 +15,12 @@ namespace Monitorian.Core.Models
 	public class LanguageService
 	{
 		public static IReadOnlyCollection<string> Options => new[] { Option };
+
 		private const string Option = "/lang";
 
 		private static readonly Lazy<CultureInfo> _culture = new(() =>
 		{
-			var arguments = AppKeeper.DefinedArguments;
+			var arguments = AppKeeper.StandardArguments;
 
 			int i = 0;
 			while (i < arguments.Count - 1)
@@ -54,7 +55,7 @@ namespace Monitorian.Core.Models
 		public static bool IsResourceRightToLeft => (_culture.Value?.TextInfo.IsRightToLeft is true);
 
 		/// <summary>
-		/// Switches default and current threads' culture.
+		/// Switches default and current thread's culture.
 		/// </summary>
 		/// <returns>True if successfully switches the culture</returns>
 		public static bool SwitchDefault()
