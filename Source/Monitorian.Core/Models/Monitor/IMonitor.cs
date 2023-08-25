@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +19,6 @@ namespace Monitorian.Core.Models.Monitor
 		bool IsReachable { get; }
 		bool IsBrightnessSupported { get; }
 		bool IsContrastSupported { get; }
-		bool IsTemperatureSupported { get; }
 
 		int Brightness { get; }
 		int BrightnessSystemAdjusted { get; }
@@ -31,7 +31,8 @@ namespace Monitorian.Core.Models.Monitor
 		AccessResult UpdateContrast();
 		AccessResult SetContrast(int contrast);
 
-		AccessResult ChangeTemperature();
+		(AccessResult result, ValueData data) GetValue(byte code);
+		(AccessResult result, ValueData data) SetValue(byte code, int value);
 	}
 
 	public enum AccessStatus
@@ -55,5 +56,17 @@ namespace Monitorian.Core.Models.Monitor
 		public static readonly AccessResult Succeeded = new(AccessStatus.Succeeded, null);
 		public static readonly AccessResult Failed = new(AccessStatus.Failed, null);
 		public static readonly AccessResult NotSupported = new(AccessStatus.NotSupported, null);
+	}
+
+	public class ValueData
+	{
+		public byte Value { get; }
+		public ReadOnlyCollection<byte> Values { get; }
+
+		public ValueData(byte value, IEnumerable<byte> values)
+		{
+			this.Value = value;
+			this.Values = Array.AsReadOnly(values.ToArray());
+		}
 	}
 }

@@ -36,10 +36,12 @@ namespace Monitorian.Core
 		public NotifyIconContainer NotifyIconContainer { get; }
 		public WindowPainter WindowPainter { get; }
 
-		private readonly DisplayWatcher _displayWatcher;
 		private readonly SessionWatcher _sessionWatcher;
 		private readonly PowerWatcher _powerWatcher;
+		private readonly DisplaySettingsWatcher _displaySettingsWatcher;
+		private readonly DisplayInformationWatcher _displayInformationWatcher;
 		private readonly BrightnessWatcher _brightnessWatcher;
+		private readonly BrightnessConnector _brightnessConnector;
 
 		protected OperationRecorder Recorder { get; } = new();
 
@@ -56,10 +58,12 @@ namespace Monitorian.Core
 			NotifyIconContainer = new NotifyIconContainer();
 			WindowPainter = new WindowPainter();
 
-			_displayWatcher = new DisplayWatcher();
 			_sessionWatcher = new SessionWatcher();
 			_powerWatcher = new PowerWatcher();
+			_displaySettingsWatcher = new DisplaySettingsWatcher();
+			_displayInformationWatcher = new DisplayInformationWatcher();
 			_brightnessWatcher = new BrightnessWatcher();
+			_brightnessConnector = new BrightnessConnector();
 		}
 
 		public virtual async Task InitiateAsync()
@@ -88,16 +92,39 @@ namespace Monitorian.Core
 			NotifyIconContainer.MouseLeftButtonClick += OnMainWindowShowRequestedBySelf;
 			NotifyIconContainer.MouseRightButtonClick += OnMenuWindowShowRequested;
 
-			_displayWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(DisplayWatcher), e));
 			_sessionWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(SessionWatcher), e));
 			_powerWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(PowerWatcher), e));
+			_displaySettingsWatcher.Subscribe((e) => OnMonitorsChangeInferred(nameof(DisplaySettingsWatcher), e));
 
-			_brightnessWatcher.Subscribe((instanceName, brightness) =>
+			_displayInformationWatcher.Subscribe(async (deviceInstanceId, message) =>
 			{
 				if (!_sessionWatcher.IsLocked)
-					Update(instanceName, brightness);
-			},
-			async (message) => await Recorder.RecordAsync(message));
+				{
+					await UpdateMessageAsync(deviceInstanceId, message);
+					await Recorder.RecordAsync(message);
+				}
+			});
+
+			if (Monitors.Any(x => x.IsInternal))
+			{
+				_brightnessWatcher.Subscribe((instanceName, brightness) =>
+				{
+					if (!_sessionWatcher.IsLocked)
+						Update(instanceName, brightness);
+				},
+				async (message) => await Recorder.RecordAsync(message));
+
+				if (_brightnessConnector.IsEnabled)
+				{
+					await _brightnessConnector.InitiateAsync((brightness) =>
+					{
+						if (!_sessionWatcher.IsLocked)
+							Update(null, brightness);
+					},
+					async (message) => await Recorder.RecordAsync(message),
+					() => _current.Dispatcher.Invoke(() => _current.MainWindow.Visibility is Visibility.Visible));
+				}
+			}
 
 			await CleanAsync();
 		}
@@ -109,10 +136,12 @@ namespace Monitorian.Core
 			NotifyIconContainer.Dispose();
 			WindowPainter.Dispose();
 
-			_displayWatcher.Dispose();
 			_sessionWatcher.Dispose();
 			_powerWatcher.Dispose();
+			_displaySettingsWatcher.Dispose();
+			_displayInformationWatcher.Dispose();
 			_brightnessWatcher.Dispose();
+			_brightnessConnector.Dispose();
 		}
 
 		protected virtual Task<string> HandleRequestAsync(IReadOnlyCollection<string> args)
@@ -125,12 +154,18 @@ namespace Monitorian.Core
 		{
 			ShowMainWindow();
 			await CheckUpdateAsync();
+
+			if (_brightnessConnector.IsEnabled)
+				await _brightnessConnector.ConnectAsync(true);
 		}
 
 		protected async void OnMainWindowShowRequestedByOther(object sender, EventArgs e)
 		{
 			_current.Dispatcher.Invoke(() => ShowMainWindow());
 			await CheckUpdateAsync();
+
+			if (_brightnessConnector.IsEnabled)
+				await _brightnessConnector.ConnectAsync(true);
 		}
 
 		protected void OnMenuWindowShowRequested(object sender, Point e)
@@ -240,7 +275,7 @@ namespace Monitorian.Core
 			{
 				await Recorder.RecordAsync($"{nameof(OnMonitorsChangeFound)}");
 
-				_displayWatcher.RaiseDisplaySettingsChanged();
+				_displaySettingsWatcher.RaiseDisplaySettingsChanged();
 			}
 		}
 
@@ -405,9 +440,22 @@ namespace Monitorian.Core
 
 		protected virtual void Update(string instanceName, int brightness)
 		{
-			var monitor = Monitors.FirstOrDefault(x => instanceName.StartsWith(x.DeviceInstanceId, StringComparison.OrdinalIgnoreCase));
+			var monitor = !string.IsNullOrEmpty(instanceName)
+				? Monitors.FirstOrDefault(x => instanceName.StartsWith(x.DeviceInstanceId, StringComparison.OrdinalIgnoreCase))
+				: Monitors.FirstOrDefault(x => x.IsInternal);
+
 			EnsureUnisonWorkable(monitor);
 			monitor?.UpdateBrightness(brightness);
+		}
+
+		protected virtual async Task UpdateMessageAsync(string deviceInstanceId, string message)
+		{
+			var monitor = Monitors.FirstOrDefault(x => string.Equals(x.DeviceInstanceId, deviceInstanceId, StringComparison.OrdinalIgnoreCase));
+			System.Diagnostics.Debug.WriteLine(message);
+			if (monitor is not null)
+			{
+				await monitor.ShowNormalMessageAsync(message, TimeSpan.FromSeconds(30));
+			}
 		}
 
 		private void MonitorsDispose()
@@ -489,7 +537,11 @@ namespace Monitorian.Core
 
 		protected virtual Task CleanAsync()
 		{
-			return Task.Run(() => File.Delete(Path.Combine(Path.GetTempPath(), "License.html")));
+			var orphanFilePath = Path.Combine(Path.GetTempPath(), "License.html");
+			if (!File.Exists(orphanFilePath))
+				return Task.CompletedTask;
+
+			return Task.Run(() => File.Delete(orphanFilePath));
 		}
 
 		#endregion

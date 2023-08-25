@@ -198,7 +198,7 @@ namespace Monitorian.Core.Models
 		/// Records exception log to AppData and Desktop.
 		/// </summary>
 		/// <param name="exception">Exception</param>
-		/// <param name="capacity">The number of excceptions that the log file can contain</param>
+		/// <param name="capacity">The number of exceptions that the log file can contain</param>
 		/// <remarks>
 		/// The log file will be appended with new exception as long as one day has not yet passed
 		/// since last write. Otherwise, the log file will be overwritten.
@@ -234,7 +234,8 @@ namespace Monitorian.Core.Models
 		{
 			try
 			{
-				var tempFilePath = Path.Combine(Path.GetTempPath(), fileName);
+				if (!TempService.TryGetFilePath(fileName, null, out var tempFilePath))
+					return;
 
 				UpdateContent(tempFilePath, content, capacity);
 			}

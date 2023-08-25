@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -20,7 +19,6 @@ namespace Monitorian.Core.Models.Monitor
 		public override bool IsBrightnessSupported => _capability.IsBrightnessSupported;
 		public override bool IsContrastSupported => _capability.IsContrastSupported;
 		public override bool IsPrecleared => _capability.IsPrecleared;
-		public override bool IsTemperatureSupported => _capability.IsTemperatureSupported;
 
 		public DdcMonitorItem(
 			string deviceInstanceId,
@@ -29,14 +27,16 @@ namespace Monitorian.Core.Models.Monitor
 			byte monitorIndex,
 			Rect monitorRect,
 			SafePhysicalMonitorHandle handle,
-			MonitorCapability capability) : base(
+			MonitorCapability capability,
+			Action onDisposed = null) : base(
 				deviceInstanceId: deviceInstanceId,
 				description: description,
 				displayIndex: displayIndex,
 				monitorIndex: monitorIndex,
 				monitorRect: monitorRect,
 				isInternal: false,
-				isReachable: true)
+				isReachable: true,
+				onDisposed: onDisposed)
 		{
 			this._handle = handle ?? throw new ArgumentNullException(nameof(handle));
 			this._capability = capability ?? throw new ArgumentNullException(nameof(capability));
@@ -114,27 +114,34 @@ namespace Monitorian.Core.Models.Monitor
 			return result;
 		}
 
-		public override AccessResult ChangeTemperature()
+		public override (AccessResult result, ValueData data) GetValue(byte code)
 		{
-			var (result, current) = MonitorConfiguration.GetTemperature(_handle);
+			if ((_capability.CapabilitiesCodes is null)
+				|| !_capability.CapabilitiesCodes.TryGetValue(code, out var values))
+				return (AccessResult.NotSupported, null);
+
+			var (result, _, current, _) = MonitorConfiguration.GetValue(_handle, code);
 			if (result.Status == AccessStatus.Succeeded)
 			{
-				var next = GetNext(_capability.Temperatures, current);
-				result = MonitorConfiguration.SetTemperature(_handle, next);
-
-				Debug.WriteLine($"Color Temperature: {current} -> {next}");
+				return (result, new ValueData((byte)current, values));
 			}
-			return result;
+			return (result, null);
+		}
 
-			static byte GetNext(IReadOnlyList<byte> source, byte current)
+		public override (AccessResult result, ValueData data) SetValue(byte code, int value)
+		{
+			if ((_capability.CapabilitiesCodes is null)
+				|| !_capability.CapabilitiesCodes.TryGetValue(code, out var values)
+				|| (value is < byte.MinValue or > byte.MaxValue)
+				|| (values?.Contains((byte)value) is false))
+				return (AccessResult.NotSupported, null);
+
+			var result = MonitorConfiguration.SetValue(_handle, code, (uint)value);
+			if (result.Status == AccessStatus.Succeeded)
 			{
-				for (int i = 0; i < source.Count; i++)
-				{
-					if (source[i] == current)
-						return (i < source.Count - 1) ? source[i + 1] : source[0];
-				}
-				return source.First(); // Fallback
+				return (result, new ValueData((byte)value, values));
 			}
+			return (result, null);
 		}
 
 		#region IDisposable
