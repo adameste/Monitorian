@@ -309,7 +309,7 @@ public class AppControllerCore
 					var oldMonitorIndices = Enumerable.Range(0, Monitors.Count).ToList();
 					var newMonitorItems = new List<IMonitor>();
 
-					foreach (var item in await MonitorManager.EnumerateMonitorsAsync(TimeSpan.FromSeconds(12)))
+					foreach (var item in await MonitorManager.EnumerateMonitorsAsync(TimeSpan.FromSeconds(120)))
 					{
 						Recorder.AddGroupRecordItem("Items", item.ToString());
 

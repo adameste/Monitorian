@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
-
+using System.Threading.Tasks;
 using Monitorian.Core.Helper;
 
 namespace Monitorian.Core.Models.Monitor;
@@ -264,9 +264,24 @@ internal class MonitorConfiguration
 			out _)
 			&& caps.HasFlag(MC_CAPS.MC_CAPS_BRIGHTNESS);
 
-		if (GetCapabilitiesStringLength(
-			physicalMonitorHandle,
-			out uint capabilitiesStringLength))
+		var loaded = false;
+		uint capabilitiesStringLength = 0;
+		for (int i = 0; i < 200; i++)
+		{
+			if (GetCapabilitiesStringLength(
+						physicalMonitorHandle,
+						out capabilitiesStringLength))
+			{
+				loaded = true;
+				break;
+			}
+			else
+			{
+				Task.Delay(200).Wait();
+			}
+		}
+
+		if (loaded)
 		{
 			var buffer = new StringBuilder((int)capabilitiesStringLength);
 
@@ -457,7 +472,7 @@ internal class MonitorConfiguration
 					break;
 			}
 		}
-	end:
+end:
 		return dic;
 
 		static bool IsAscii(char c) => c <= 0x7F;
