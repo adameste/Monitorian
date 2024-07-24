@@ -183,7 +183,11 @@ public class AppControllerCore
 
 	protected virtual void HideMainWindow()
 	{
-		((MainWindow)_current.MainWindow).ClearHide();
+		var window = (MainWindow)_current.MainWindow;
+		if (window is { Visibility: Visibility.Hidden })
+			return;
+
+		window.ClearHide();
 	}
 
 	protected virtual void ShowMenuWindow(Point pivot)
@@ -449,7 +453,6 @@ public class AppControllerCore
 	protected virtual async Task UpdateMessageAsync(string deviceInstanceId, string message)
 	{
 		var monitor = Monitors.FirstOrDefault(x => string.Equals(x.DeviceInstanceId, deviceInstanceId, StringComparison.OrdinalIgnoreCase));
-		System.Diagnostics.Debug.WriteLine(message);
 		if (monitor is not null)
 		{
 			await monitor.ShowNormalMessageAsync(message, TimeSpan.FromSeconds(30));

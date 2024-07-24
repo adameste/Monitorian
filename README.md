@@ -22,6 +22,7 @@ Additional languages:
  - Arabic (ar) by @MohammadShughri
  - Catalan (ca) by @ericmp33
  - German (de) by @uDEV2019
+ - Greek (el-GR) by @NickMihal
  - Spanish (es) by @josemirm and @ericmp33
  - French (fr) by @AlexZeGamer and @Rikiiiiiii
  - Italian (it) by @GhostyJade
@@ -32,6 +33,7 @@ Additional languages:
  - Portuguese (pt-BR) by @guilhermgonzaga
  - Romanian (ro) by @calini
  - Russian (ru-RU) by @SigmaTel71 and @San4es
+ - Albanian (sq) by @RDN000
  - Turkish (tr-TR) by @webbudesign
  - Ukrainian (uk-UA) by @kaplun07
  - Simplified Chinese (zh-Hans) by @ComMouse, @zhujunsan, @XMuli, @FISHandCHEAP and @FrzMtrsprt
@@ -56,7 +58,7 @@ Additional languages:
    ```
 
  * Other:<br>
-:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/4.5.0-Installer/MonitorianInstaller450.zip)
+:floppy_disk: [Installer](https://github.com/emoacht/Monitorian/releases/download/4.7.0-Installer/MonitorianInstaller470.zip)
 
 ## Install/Uninstall
 
@@ -77,6 +79,7 @@ In such case, please note the following:
  - To adjust the brightness by a touchpad, place two fingers on it and swipe horizontally. The touchpad must be a precision touchpad.
  - The number of monitors shown at a time is up to 4.
  - In case an external monitor is not shown, read [detection of external monitors](#detection-of-external-monitors).
+ - This app identifies each monitor by an unique identifier given by the OS. Even with the same PC and monitor, this identifier may vary depending on the type of connection (e.g. USB-C DisplayPort Alt mode) or the selection of connectors of the same type. Consequently, if a monitor is reconnected to the different connector, it may not be regarded as the same monitor and some functions may not work as expected.
 
 ## Add-on Features
 
@@ -212,6 +215,16 @@ An alternative language can be shown by adding a Resources (.resx) file into `/S
 
 ## History
 
+Ver 4.7 2024-7-21
+
+ - Improve internal code
+ - Albanian (sq) language. Thanks to @RDN000Add!
+
+Ver 4.6 2023-12-8
+
+ - Modify app icon
+ - Add Greek (el-GR) language. Thanks to @NickMihal!
+
 Ver 4.5 2023-9-29
 
  - Modify behaviors and so on
@@ -256,7 +269,7 @@ Ver 3.13 2022-8-29
  
 Ver 3.12 2022-7-4
 
- - Enable mouse horizontal wheel to change brigtness concurrently (except that in unison)
+ - Enable mouse horizontal wheel to change brightness concurrently (except that in unison)
 
 Ver 3.11 2022-6-2
 

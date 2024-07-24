@@ -43,7 +43,7 @@ public static class MouseAddition
 
 	#endregion
 
-	private static readonly Dictionary<Window, HashSet<UIElement>> _windows = new();
+	private static readonly Dictionary<Window, HashSet<UIElement>> _windows = [];
 
 	/// <summary>
 	/// Enables mouse horizontal wheel attached event for a specified UIElement.
@@ -78,7 +78,7 @@ public static class MouseAddition
 			return;
 		}
 
-		_windows.Add(window, new HashSet<UIElement> { element });
+		_windows.Add(window, [element]);
 
 		var handle = new WindowInteropHelper(window).Handle;
 		if ((handle != IntPtr.Zero) && (HwndSource.FromHwnd(handle) is HwndSource source))

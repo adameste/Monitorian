@@ -11,7 +11,7 @@ namespace ScreenFrame.Movers;
 public class SwitchWindowMover : StickWindowMover
 {
 	/// <summary>
-	/// Whether the window is departed from taskbar
+	/// Whether the window is departed from the taskbar
 	/// </summary>
 	public bool IsDeparted
 	{
@@ -55,11 +55,24 @@ public class SwitchWindowMover : StickWindowMover
 	public SwitchWindowMover(Window window, NotifyIcon notifyIcon) : base(window, notifyIcon)
 	{
 		_departureTimer = new DispatcherTimer();
-		_departureTimer.Tick += (_, _) =>
-		{
-			_departureTimer.Stop();
-			InitiateDeparture();
-		};
+		_departureTimer.Tick += OnTick;
+	}
+
+	/// <summary>
+	/// Called when Closed event of window is raised.
+	/// </summary>
+	protected override void OnClosed(object sender, EventArgs e)
+	{
+		base.OnClosed(sender, e);
+
+		_departureTimer.Stop();
+		_departureTimer.Tick -= OnTick;
+	}
+
+	private void OnTick(object sender, EventArgs e)
+	{
+		_departureTimer.Stop();
+		InitiateDeparture();
 	}
 
 	/// <summary>

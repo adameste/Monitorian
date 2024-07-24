@@ -18,7 +18,7 @@ public abstract class WindowMover
 	protected readonly Window _window;
 
 	/// <summary>
-	/// Per-Monitor DPI of window
+	/// Per-Monitor DPI of the window
 	/// </summary>
 	public DpiScale Dpi => VisualTreeHelperAddition.GetDpi(_window);
 
@@ -37,8 +37,13 @@ public abstract class WindowMover
 	private HwndSource _source;
 	private WindowWatcher _watcher;
 
-	private void OnSourceInitialized(object sender, EventArgs e)
+	/// <summary>
+	/// Called when SourceInitialized event of window is raised. 
+	/// </summary>
+	protected virtual void OnSourceInitialized(object sender, EventArgs e)
 	{
+		_window.SourceInitialized -= OnSourceInitialized;
+
 		_source = PresentationSource.FromVisual(_window) as HwndSource;
 		_source?.AddHook(WndProc);
 
@@ -49,8 +54,13 @@ public abstract class WindowMover
 		}
 	}
 
-	private void OnClosed(object sender, EventArgs e)
+	/// <summary>
+	/// Called when Closed event of window is raised.
+	/// </summary>
+	protected virtual void OnClosed(object sender, EventArgs e)
 	{
+		_window.Closed -= OnClosed;
+
 		_source?.RemoveHook(WndProc);
 		_watcher?.RemoveHook();
 	}
@@ -61,7 +71,7 @@ public abstract class WindowMover
 	}
 
 	/// <summary>
-	/// Adjusts DPI of window.
+	/// Adjusts DPI of the window.
 	/// </summary>
 	/// <param name="dpi">DPI information</param>
 	protected virtual void AdjustWindow(DpiScale dpi)
@@ -129,7 +139,7 @@ public abstract class WindowMover
 	protected abstract void HandleWindowPosChanged(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled);
 
 	/// <summary>
-	/// Handles event when DPI for the window has changed.
+	/// Handles event when DPI of the window has changed.
 	/// </summary>
 	protected virtual void HandleDpiChanged(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 	{

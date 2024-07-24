@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
@@ -115,10 +117,10 @@ internal class DisplayMonitorProvider
 
 		try
 		{
-			var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(Windows.Devices.Display.DisplayMonitor.GetDeviceSelector(), new[] { deviceInstanceIdKey });
+			var items = new List<DisplayItem>();
+			var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(Windows.Devices.Display.DisplayMonitor.GetDeviceSelector(), [deviceInstanceIdKey]);
 			if (devices is { Count: > 0 })
 			{
-				var items = new List<DisplayItem>(devices.Count);
 				foreach (var device in devices)
 				{
 					if (!device.Properties.TryGetValue(deviceInstanceIdKey, out object value))
@@ -147,8 +149,24 @@ internal class DisplayMonitorProvider
 						isInternal: (displayMonitor.ConnectionKind == Windows.Devices.Display.DisplayMonitorConnectionKind.Internal),
 						connectionDescription: GetConnectionDescription(displayMonitor.ConnectionKind, displayMonitor.PhysicalConnector)));
 				}
-				return items.ToArray();
 			}
+#if DEBUG
+			using var manager = Windows.Devices.Display.Core.DisplayManager.Create(Windows.Devices.Display.Core.DisplayManagerOptions.None);
+			var state = manager.TryReadCurrentStateForAllTargets().State;
+			foreach (var (path, target) in state.Views
+				.SelectMany(x => x.Paths)
+				.Select(x => (x, x.Target))
+				.Where(x => x.Target.IsConnected))
+			{
+				var displayMonitor = target.TryGetMonitor();
+				var deviceInstanceId = DeviceConversion.ConvertToDeviceInstanceId(displayMonitor.DeviceId);
+				Debug.Assert(items.Any(x => x.DeviceInstanceId == deviceInstanceId));
+
+				//var rate = path.PresentationRate.Value.VerticalSyncRate;
+				//Debug.WriteLine($"RefreshRate: {rate.Numerator / (float)rate.Denominator}");
+			}
+#endif
+			return items.ToArray();
 		}
 		catch (ArgumentException ax) when ((uint)ax.HResult is ERROR_INVALID_PARAMETER)
 		{

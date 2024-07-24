@@ -21,13 +21,13 @@ public class AppKeeper
 		StartupAgent = new StartupAgent();
 	}
 
-	public Task<bool> StartAsync(StartupEventArgs e) => StartAsync(e, Enumerable.Empty<string>());
+	public Task<bool> StartAsync(StartupEventArgs e) => StartAsync(e, null);
 
 	public async Task<bool> StartAsync(StartupEventArgs e, IEnumerable<string> additionalOptions)
 	{
 		// This method must be called before StandardArguments or OtherArguments property is consumed.
 		// An exception thrown in this method will not be handled.
-		await ParseArgumentsAsync(e, EnumerateStandardOptions().Concat(additionalOptions).ToArray());
+		await ParseArgumentsAsync(e, EnumerateStandardOptions().Concat(additionalOptions ?? []).ToArray());
 #if DEBUG
 		ConsoleService.TryStartWrite();
 #else
@@ -37,7 +37,7 @@ public class AppKeeper
 
 		SubscribeExceptions();
 
-		var (success, response) = StartupAgent.Start(ProductInfo.Product, ProductInfo.StartupTaskId, OtherArguments);
+		var (success, response) = StartupAgent.Start(ProductInfo.Product, ProductInfo.StartupTaskId, ForwardingArguments);
 		if (!success && (response is not null))
 		{
 			ConsoleService.WriteLine(response);
@@ -60,11 +60,14 @@ public class AppKeeper
 
 	#region Arguments
 
-	public static IReadOnlyList<string> StandardArguments => _standardArguments?.ToArray() ?? Array.Empty<string>();
+	public static IReadOnlyList<string> StandardArguments => _standardArguments?.ToArray() ?? [];
 	private static string[] _standardArguments;
 
-	public static IReadOnlyList<string> OtherArguments => _otherArguments?.ToArray() ?? Array.Empty<string>();
+	public static IReadOnlyList<string> OtherArguments => _otherArguments?.ToArray() ?? [];
 	private static string[] _otherArguments;
+
+	public static IReadOnlyList<string> ForwardingArguments => _forwardingArguments?.ToArray() ?? [];
+	private static string[] _forwardingArguments;
 
 	public static IEnumerable<string> EnumerateStandardOptions() =>
 		new[]
@@ -78,33 +81,39 @@ public class AppKeeper
 
 	private async Task ParseArgumentsAsync(StartupEventArgs e, string[] standardOptions)
 	{
-		// Load persistent arguments.
-		var args = (await LoadArgumentsAsync())?.Split() ?? Array.Empty<string>();
-
-		// Concatenate current and persistent arguments.
+		// Divide current arguments.
 		// The first element of StartupEventArgs.Args is not executing assembly's path unlike
 		// that of arguments provided by Environment.GetCommandLineArgs method.
-		args = e.Args.Concat(args.Select(x => x.Trim('"'))).ToArray();
-		if (args is not { Length: > 0 })
-			return;
+		var (currentStandard, currentOther) = Divide(e.Args);
 
-		const char optionMark = '/';
-		var isStandard = false;
+		// Divide persistent arguments.
+		var persistentArgs = (await LoadArgumentsAsync())?.Split().Select(x => x.Trim('"'));
+		var (persistentStandard, persistentOther) = Divide(persistentArgs);
 
-		var buffer = args
-			.Where(x => !string.IsNullOrWhiteSpace(x))
-			.GroupBy(x => (x[0] == optionMark) ? (isStandard = standardOptions.Contains(x.ToLower())) : isStandard)
-			.ToArray();
+		_standardArguments = persistentStandard.Concat(currentStandard).ToArray();
+		_forwardingArguments = currentOther.ToArray();
+		_otherArguments = persistentOther.Concat(_forwardingArguments).ToArray();
 
-		_standardArguments = buffer.SingleOrDefault(x => x.Key)?.ToArray();
-		_otherArguments = buffer.SingleOrDefault(x => !x.Key)?.ToArray();
+		(IEnumerable<string> standard, IEnumerable<string> other) Divide(IEnumerable<string> args)
+		{
+			const char optionMark = '/';
+			var isStandard = false;
+
+			var buffer = args?
+				.Where(x => !string.IsNullOrWhiteSpace(x))
+				.GroupBy(x => (x[0] == optionMark) ? (isStandard = standardOptions.Contains(x.ToLower())) : isStandard)
+				.ToArray() ?? [];
+
+			return (standard: buffer.SingleOrDefault(x => x.Key) ?? Enumerable.Empty<string>(),
+					other: buffer.SingleOrDefault(x => !x.Key) ?? Enumerable.Empty<string>());
+		}
 	}
 
 	private const string ArgumentsFileName = "arguments.txt";
 
 	public Task<string> LoadArgumentsAsync() => AppDataService.ReadAsync(ArgumentsFileName);
 
-	public Task SaveArgumentsAsync(string content) => AppDataService.WriteAsync(ArgumentsFileName, false, content);
+	public Task SaveArgumentsAsync(string content) => AppDataService.WriteAsync(ArgumentsFileName, append: false, delete: true, content);
 
 	#endregion
 

@@ -32,7 +32,39 @@ public class SwitchTextBox : TextBox
 	private InputDevice _device;
 	private Point _startPosition;
 	private bool _isContextMenuOpenable = true;
-	private DispatcherTimer _switchTimer;
+	private DispatcherTimer _timer;
+	private Window _window;
+
+	protected override void OnInitialized(EventArgs e)
+	{
+		base.OnInitialized(e);
+
+		this.Unloaded += OnUnloaded;
+
+		_window = Window.GetWindow(this);
+		if (_window is not null)
+			_window.Closed += OnClosed;
+	}
+
+	private void OnUnloaded(object sender, RoutedEventArgs e)
+	{
+		// Window.GetWindow method will not return the hosting window when unloaded.
+
+		if (_window is not null)
+			OnClosed(_window, e);
+	}
+
+	private void OnClosed(object sender, EventArgs e)
+	{
+		((Window)sender).Closed -= OnClosed;
+		_window = null;
+
+		if (_timer is not null)
+		{
+			_timer.Stop();
+			_timer.Tick -= OnTick;
+		}
+	}
 
 	private void OnDeviceDown(InputDevice device, bool isContextMenuOpenable)
 	{
@@ -45,20 +77,20 @@ public class SwitchTextBox : TextBox
 
 		this._isContextMenuOpenable = isContextMenuOpenable;
 
-		_switchTimer ??= new DispatcherTimer(HoldingDuration, DispatcherPriority.Background, OnTick, Dispatcher.CurrentDispatcher);
-		_switchTimer.Start();
+		_timer ??= new DispatcherTimer(HoldingDuration, DispatcherPriority.Background, OnTick, Dispatcher.CurrentDispatcher);
+		_timer.Start();
 	}
 
 	private void OnDeviceUp()
 	{
-		_switchTimer?.Stop();
+		_timer?.Stop();
 
 		_device = null;
 	}
 
 	private void OnTick(object sender, EventArgs e)
 	{
-		_switchTimer.Stop();
+		_timer.Stop();
 
 		if (!TryGetDevicePosition(_device, out Point endPosition))
 			return;
@@ -100,13 +132,12 @@ public class SwitchTextBox : TextBox
 	protected override void OnLostFocus(RoutedEventArgs e)
 	{
 		// If a TextBox has focus when the window is deactivated, LostFocus event will occur
-		// after Window.Deactivated event. Since a TextBox's text will be updated to source when
-		// LostFocus event occurs by default, Window.Deactivated event is not always appropriate
-		// to capture the latest text.
+		// after Window.Deactivated event. Since a TextBox's text will be updated to source
+		// when LostFocus event occurs by default, Window.Deactivated event is not always
+		// appropriate to update the latest text.
 
-		var window = Window.GetWindow(this);
-		if (!window.IsActive)
-			_switchTimer?.Stop();
+		if (_window is { IsActive: false })
+			_timer?.Stop();
 
 		this.IsReadOnly = true;
 

@@ -30,7 +30,7 @@ public abstract class WindowPainter : IDisposable
 	/// <summary>
 	/// Options
 	/// </summary>
-	protected static IReadOnlyCollection<string> Options => new[] { ThemeOption, TextureOption, CornerOption };
+	protected static IReadOnlyCollection<string> Options => [ThemeOption, TextureOption, CornerOption];
 
 	private const string ThemeOption = "/theme";
 
@@ -104,7 +104,7 @@ public abstract class WindowPainter : IDisposable
 
 	#region Window
 
-	private readonly List<Window> _windows = new();
+	private readonly List<Window> _windows = [];
 
 	/// <summary>
 	/// Adds a window to be painted.
@@ -204,25 +204,29 @@ public abstract class WindowPainter : IDisposable
 
 	private async void OnThemeChanged()
 	{
-		_applyChangedTheme ??= new Throttle(() =>
-		{
-			if (ApplyChangedTheme())
+		_applyChangedTheme ??= new Throttle(
+			TimeSpan.FromSeconds(0.2),
+			() =>
 			{
-				ThemeChanged?.Invoke(null, EventArgs.Empty);
-			}
-		});
+				if (ApplyChangedTheme())
+				{
+					ThemeChanged?.Invoke(null, EventArgs.Empty);
+				}
+			});
 		await _applyChangedTheme.PushAsync();
 	}
 
 	private async void OnAccentColorChanged(Color color)
 	{
-		_applyChangedAccentColor ??= new Throttle<Color>(c =>
-		{
-			if (ApplyChangedAccentColor(c))
+		_applyChangedAccentColor ??= new Throttle<Color>(
+			TimeSpan.FromSeconds(0.2),
+			c =>
 			{
-				AccentColorChanged?.Invoke(null, EventArgs.Empty);
-			}
-		});
+				if (ApplyChangedAccentColor(c))
+				{
+					AccentColorChanged?.Invoke(null, EventArgs.Empty);
+				}
+			});
 		await _applyChangedAccentColor.PushAsync(color);
 	}
 
